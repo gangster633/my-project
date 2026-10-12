@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>대출 이자 계산기 - 데일리툴</title>
+<meta name="description" content="원리금균등, 원금균등, 만기일시 상환 방식별 월 상환액과 총 이자를 계산합니다.">
+<link rel="canonical" href="https://gangster633.github.io/my-project/loan.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="데일리툴">
+<meta property="og:title" content="대출 이자 계산기 - 데일리툴">
+<meta property="og:description" content="원리금균등, 원금균등, 만기일시 상환 방식별 월 상환액과 총 이자를 계산합니다.">
+<meta property="og:url" content="https://gangster633.github.io/my-project/loan.html">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/style.css">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9368731506053936" crossorigin="anonymous"></script>
+</head>
+<body>
+<header class="site-header">
+  <div class="wrap">
+    <a class="logo" href="./">데일리툴</a>
+    <nav class="nav"><a href="char-counter.html">글자수 세기</a><a href="age.html">만 나이 계산기</a><a href="dday.html">D-day 계산기</a><a href="percent.html">퍼센트 계산기</a><a href="pyeong.html">평수 계산기</a><a href="bmi.html">BMI 계산기</a><a href="loan.html" aria-current="page">대출 이자 계산기</a><a href="wage.html">시급 월급 계산기</a></nav>
+  </div>
+</header>
+<main class="wrap">
+<h1>대출 이자 계산기</h1>
+<p class="lead">대출 금액, 연 이자율, 기간을 입력하면 상환 방식별 월 납입금과 총 이자를 계산합니다.</p>
+
+<div class="tool">
+  <div class="row">
+    <div class="field"><label for="p">대출 금액 (만원)</label><input type="number" id="p" value="10000" inputmode="decimal"></div>
+    <div class="field"><label for="r">연 이자율 (%)</label><input type="number" id="r" value="4.5" step="0.1" inputmode="decimal"></div>
+    <div class="field"><label for="n">대출 기간 (개월)</label><input type="number" id="n" value="360" inputmode="numeric"></div>
+  </div>
+  <div class="row">
+    <div class="field"><label for="type">상환 방식</label>
+      <select id="type">
+        <option value="annuity">원리금균등 상환</option>
+        <option value="principal">원금균등 상환</option>
+        <option value="bullet">만기일시 상환</option>
+      </select>
+    </div>
+  </div>
+  <div class="result" id="result" aria-live="polite"></div>
+  <details id="scheduleBox"><summary>월별 상환 스케줄 보기</summary><div class="table-scroll" id="schedule"></div></details>
+</div>
+
+<section class="content">
+  <h2>상환 방식별 차이</h2>
+  <div class="table-scroll">
+  <table>
+    <tr><th>방식</th><th>매달 내는 돈</th><th>총 이자</th><th>이런 분께</th></tr>
+    <tr><td>원리금균등</td><td>매달 같음</td><td>중간</td><td>매달 일정한 금액으로 계획을 세우고 싶을 때</td></tr>
+    <tr><td>원금균등</td><td>처음이 가장 많고 점점 줄어듦</td><td>가장 적음</td><td>초기 상환 여력이 있고 총 이자를 줄이고 싶을 때</td></tr>
+    <tr><td>만기일시</td><td>매달 이자만, 만기에 원금 전액</td><td>가장 많음</td><td>단기 대출이거나 만기에 목돈이 들어올 때</td></tr>
+  </table>
+  </div>
+
+  <h2>계산 공식</h2>
+  <p>월 이자율 r = 연 이자율 ÷ 12, 대출 기간 n개월, 대출 원금 P라고 할 때</p>
+  <ul>
+    <li><strong>원리금균등</strong> 월 납입금 = P × r × (1 + r)<sup>n</sup> ÷ ((1 + r)<sup>n</sup> − 1)</li>
+    <li><strong>원금균등</strong> k번째 달 납입금 = P ÷ n + 남은 원금 × r</li>
+    <li><strong>만기일시</strong> 월 이자 = P × r, 마지막 달에 원금 P를 함께 상환</li>
+  </ul>
+
+  <h2>계산 예시</h2>
+  <p>1억 원을 연 4.5%, 30년(360개월) 원리금균등으로 빌리면 월 납입금은 약 <strong>50만 7천 원</strong>, 30년간 내는 총 이자는 약 <strong>8,240만 원</strong>입니다. 같은 조건에서 원금균등으로 갚으면 첫 달 납입금은 약 65만 3천 원으로 더 많지만 총 이자는 약 6,770만 원으로 줄어듭니다.</p>
+
+  <h2>자주 묻는 질문</h2>
+  <details><summary>은행 앱 결과와 조금 다른 이유는?</summary><p>은행은 실제 일수(30일, 31일)로 이자를 계산하고 원 단위 절사를 하기 때문에 수백 원~수천 원 정도 차이가 날 수 있습니다. 거치 기간, 중도상환수수료, 변동금리도 이 계산기에는 반영되지 않습니다.</p></details>
+  <details><summary>금리가 1%p 오르면 얼마나 더 내나요?</summary><p>이자율 칸에 바뀐 금리를 넣어 두 결과를 비교해 보세요. 1억 원 30년 원리금균등 기준으로 4.5%에서 5.5%가 되면 월 납입금이 약 6만 1천 원 늘어납니다.</p></details>
+</section>
+
+<script>
+(function () {
+  var ids = ['p', 'r', 'n', 'type'];
+  var out = document.getElementById('result'), sched = document.getElementById('schedule');
+  function won(x) { return Math.round(x).toLocaleString('ko-KR') + '원'; }
+  function update() {
+    var P = Number(document.getElementById('p').value) * 10000;
+    var r = Number(document.getElementById('r').value) / 100 / 12;
+    var n = Math.floor(Number(document.getElementById('n').value));
+    var type = document.getElementById('type').value;
+    if (!(P > 0) || !(r >= 0) || !(n > 0) || n > 600) { out.textContent = '대출 금액과 기간(1~600개월)을 확인해 주세요.'; sched.innerHTML = ''; return; }
+    var rows = [], left = P, totalInterest = 0;
+    var annuity = r === 0 ? P / n : P * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1);
+    for (var k = 1; k <= n; k++) {
+      var interest = left * r, principal;
+      if (type === 'annuity') principal = annuity - interest;
+      else if (type === 'principal') principal = P / n;
+      else principal = k === n ? P : 0;
+      if (k === n) principal = left;
+      left -= principal;
+      totalInterest += interest;
+      rows.push([k, principal + interest, principal, interest, Math.max(left, 0)]);
+    }
+    var first = rows[0][1], last = rows[n - 1][1];
+    var monthly = type === 'annuity' ? '<div class="big">월 ' + won(first) + '</div>' :
+      type === 'principal' ? '<div class="big">첫 달 ' + won(first) + '</div><div>마지막 달 ' + won(last) + '</div>' :
+      '<div class="big">월 이자 ' + won(first) + '</div><div>만기 상환 ' + won(last) + '</div>';
+    out.innerHTML = monthly + '<div class="stats">' +
+      '<div class="stat"><b>' + won(totalInterest) + '</b><span>총 이자</span></div>' +
+      '<div class="stat"><b>' + won(P + totalInterest) + '</b><span>총 상환액</span></div></div>';
+    sched.innerHTML = '<table><tr><th>회차</th><th>납입금</th><th>원금</th><th>이자</th><th>남은 원금</th></tr>' +
+      rows.map(function (x) { return '<tr><td>' + x[0] + '</td><td>' + won(x[1]) + '</td><td>' + won(x[2]) + '</td><td>' + won(x[3]) + '</td><td>' + won(x[4]) + '</td></tr>'; }).join('') +
+      '</table>';
+  }
+  ids.forEach(function (id) { document.getElementById(id).addEventListener('input', update); });
+  update();
+})();
+</script>
+</main>
+<footer class="site-footer">
+  <div class="wrap">
+    <p><a href="about.html">사이트 소개</a> · <a href="privacy.html">개인정보처리방침</a> · <a href="contact.html">문의하기</a></p>
+    <p>계산 결과는 참고용이며, 중요한 결정은 관련 기관이나 전문가에게 확인하세요.</p>
+    <p>&copy; 2026 데일리툴</p>
+  </div>
+</footer>
+</body>
+</html>
