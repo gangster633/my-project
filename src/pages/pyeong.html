@@ -1,0 +1,67 @@
+<h1>평수 계산기</h1>
+<p class="lead">평과 제곱미터(㎡)를 서로 바꿔 줍니다. 한쪽에 숫자를 넣으면 다른 쪽이 자동으로 채워집니다.</p>
+
+<div class="tool">
+  <div class="row">
+    <div class="field"><label for="py">평</label><input type="number" id="py" value="32" inputmode="decimal"></div>
+    <div class="field"><label for="m2">제곱미터 (㎡)</label><input type="number" id="m2" inputmode="decimal"></div>
+  </div>
+  <div class="result" id="result" aria-live="polite"></div>
+</div>
+
+<section class="content">
+  <h2>평수 계산 공식</h2>
+  <p>1평은 사방 6자(약 1.818m) 정사각형의 넓이로, 정확히 <strong>400/121㎡ ≈ 3.3058㎡</strong>입니다.</p>
+  <ul>
+    <li>평 → ㎡: 평 × 3.3058</li>
+    <li>㎡ → 평: ㎡ × 0.3025 (또는 ㎡ ÷ 3.3058)</li>
+  </ul>
+
+  <h2>아파트 평형별 면적 표</h2>
+  <p>아파트 광고에서 말하는 "32평"은 보통 <strong>공급면적</strong> 기준입니다. 실제로 사는 공간인 전용면적은 그보다 작습니다.</p>
+  <div class="table-scroll">
+  <table>
+    <tr><th>흔히 부르는 평형</th><th>공급면적</th><th>대표 전용면적</th></tr>
+    <tr><td>18평형</td><td>약 59㎡</td><td>약 39~46㎡</td></tr>
+    <tr><td>24~25평형</td><td>약 79~84㎡</td><td>59㎡ (약 18평)</td></tr>
+    <tr><td>32~34평형</td><td>약 105~112㎡</td><td>84㎡ (약 25.4평)</td></tr>
+    <tr><td>40평형대</td><td>약 135~145㎡</td><td>114㎡ 안팎 (약 34.5평)</td></tr>
+  </table>
+  </div>
+  <p>공급면적은 단지와 설계에 따라 다르므로 정확한 값은 분양 공고나 건축물대장에서 확인하세요.</p>
+
+  <h2>전용면적, 공급면적, 계약면적의 차이</h2>
+  <ul>
+    <li><strong>전용면적</strong>: 현관문 안쪽, 우리 집만 쓰는 공간 (발코니 제외)</li>
+    <li><strong>주거공용면적</strong>: 계단, 복도, 엘리베이터처럼 같은 동 주민이 함께 쓰는 공간</li>
+    <li><strong>공급면적</strong>: 전용면적 + 주거공용면적</li>
+    <li><strong>계약면적</strong>: 공급면적 + 지하주차장, 관리사무소 등 기타공용면적</li>
+  </ul>
+
+  <h2>자주 묻는 질문</h2>
+  <details><summary>법적으로 평을 써도 되나요?</summary><p>2007년부터 부동산 거래 서류와 광고에는 법정 계량 단위인 ㎡를 써야 합니다. 평은 일상에서 넓이를 짐작할 때 참고용으로 쓰입니다.</p></details>
+  <details><summary>국민평형 84㎡는 몇 평인가요?</summary><p>전용면적 84㎡는 약 25.4평입니다. 공급면적으로 환산하면 보통 32~34평형으로 부릅니다.</p></details>
+</section>
+
+<script>
+(function () {
+  var M2_PER_PY = 400 / 121;
+  var py = document.getElementById('py'), m2 = document.getElementById('m2'), out = document.getElementById('result');
+  function r(x, d) { var k = Math.pow(10, d); return Math.round(x * k) / k; }
+  function show(p) {
+    out.innerHTML = Number.isFinite(p) ?
+      '<span class="big">' + r(p, 2).toLocaleString('ko-KR') + '평 = ' + r(p * M2_PER_PY, 2).toLocaleString('ko-KR') + '㎡</span>' : '';
+  }
+  py.addEventListener('input', function () {
+    var p = py.value === '' ? NaN : Number(py.value);
+    m2.value = Number.isFinite(p) ? r(p * M2_PER_PY, 2) : '';
+    show(p);
+  });
+  m2.addEventListener('input', function () {
+    var m = m2.value === '' ? NaN : Number(m2.value);
+    py.value = Number.isFinite(m) ? r(m / M2_PER_PY, 2) : '';
+    show(m / M2_PER_PY);
+  });
+  py.dispatchEvent(new Event('input'));
+})();
+</script>

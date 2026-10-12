@@ -1,0 +1,91 @@
+<h1>D-day 계산기</h1>
+<p class="lead">목표일까지 남은 날, 시작일로부터 지난 날, 100일·1000일 같은 기념일 날짜를 계산합니다.</p>
+
+<div class="tool">
+  <div class="tabs" role="tablist">
+    <button type="button" role="tab" aria-selected="true" data-mode="until">남은 날 계산</button>
+    <button type="button" role="tab" aria-selected="false" data-mode="since">기념일 계산</button>
+  </div>
+  <div class="row">
+    <div class="field"><label for="from">기준일 (오늘)</label><input type="date" id="from"></div>
+    <div class="field"><label for="to" id="toLabel">목표일</label><input type="date" id="to"></div>
+  </div>
+  <div class="row" id="sinceOpt" hidden>
+    <label><input type="checkbox" id="countFirst" checked style="width:auto"> 시작일을 1일로 세기 (연애·출생 기념일 방식)</label>
+  </div>
+  <div class="result" id="result" aria-live="polite"></div>
+</div>
+
+<section class="content">
+  <h2>D-day 계산 방법</h2>
+  <p><strong>남은 날 계산</strong>은 시험, 여행, 전역일처럼 앞으로 다가올 날까지 며칠 남았는지 보여 줍니다. 목표일이 오늘이면 D-day, 하루 전이면 D-1, 이미 지났으면 D+1처럼 표시합니다.</p>
+  <p><strong>기념일 계산</strong>은 사귄 날, 아기가 태어난 날, 입사일처럼 과거의 시작일로부터 며칠이 지났는지와 100일, 200일, 1000일 같은 기념일이 언제인지 알려 줍니다.</p>
+
+  <h2>시작일을 1일로 세는 이유</h2>
+  <p>연애 기념일이나 아기 백일은 보통 시작한 날을 1일째로 셉니다. 예를 들어 1월 1일에 사귀기 시작했다면 1월 1일이 1일, 4월 10일이 100일입니다(평년 기준). 반면 "몇 일 지났는지"를 셀 때는 시작일을 0일로 봅니다. 위 체크박스로 원하는 방식을 고를 수 있습니다.</p>
+
+  <h2>자주 쓰는 D-day 예시</h2>
+  <ul>
+    <li>수능, 자격증 시험까지 남은 공부 기간</li>
+    <li>전역일, 계약 만료일, 출산 예정일</li>
+    <li>연애 100일·1주년, 아기 백일·돌</li>
+    <li>금연·다이어트 시작 후 지난 날</li>
+  </ul>
+
+  <h2>자주 묻는 질문</h2>
+  <details><summary>아기 백일은 어떻게 계산하나요?</summary><p>태어난 날을 1일로 세어 100번째 되는 날이 백일입니다. 기념일 계산에서 "시작일을 1일로 세기"를 켠 상태로 생일을 입력하면 됩니다.</p></details>
+  <details><summary>윤년도 반영되나요?</summary><p>네. 실제 달력을 기준으로 계산하므로 2월 29일이 있는 해도 정확히 반영됩니다.</p></details>
+</section>
+
+<script>
+(function () {
+  var from = document.getElementById('from'), to = document.getElementById('to');
+  var out = document.getElementById('result'), countFirst = document.getElementById('countFirst');
+  var mode = 'until';
+  function fmt(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  function parse(v) { var p = v.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]); }
+  function diff(a, b) { return Math.round((b - a) / 86400000); }
+  var WEEK = ['일', '월', '화', '수', '목', '금', '토'];
+  function label(d) { return d.getFullYear() + '년 ' + (d.getMonth() + 1) + '월 ' + d.getDate() + '일 (' + WEEK[d.getDay()] + ')'; }
+
+  var today = new Date();
+  from.value = fmt(today);
+  to.value = fmt(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 100));
+
+  function update() {
+    if (!from.value || !to.value) { out.textContent = ''; return; }
+    var a = parse(from.value), b = parse(to.value);
+    if (mode === 'until') {
+      var n = diff(a, b);
+      var tag = n === 0 ? 'D-day' : n > 0 ? 'D-' + n : 'D+' + (-n);
+      out.innerHTML = '<div>' + label(b) + '</div><div class="big">' + tag + '</div>' +
+        '<div>' + (n >= 0 ? '목표일까지 ' + n.toLocaleString('ko-KR') + '일 남았습니다.' : '목표일로부터 ' + (-n).toLocaleString('ko-KR') + '일 지났습니다.') + '</div>';
+      return;
+    }
+    // since: to = 시작일, from = 기준일
+    var start = b, base = a, offset = countFirst.checked ? 1 : 0;
+    var passed = diff(start, base) + offset;
+    var rows = [100, 200, 300, 365, 500, 1000, 2000, 3000].map(function (k) {
+      var d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + k - offset);
+      var left = diff(base, d);
+      return '<tr><td>' + k.toLocaleString('ko-KR') + '일' + '</td><td>' + label(d) + '</td><td>' +
+        (left === 0 ? '오늘' : left > 0 ? left + '일 남음' : '지남') + '</td></tr>';
+    }).join('');
+    out.innerHTML = '<div>' + label(start) + ' 부터</div><div class="big">' + (passed > 0 ? passed.toLocaleString('ko-KR') + '일째' : '시작 전') + '</div>' +
+      '<div class="table-scroll"><table><tr><th>기념일</th><th>날짜</th><th>남은 날</th></tr>' + rows + '</table></div>';
+  }
+
+  document.querySelectorAll('.tabs button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      mode = btn.dataset.mode;
+      document.querySelectorAll('.tabs button').forEach(function (b) { b.setAttribute('aria-selected', String(b === btn)); });
+      document.getElementById('toLabel').textContent = mode === 'until' ? '목표일' : '시작일 (사귄 날, 태어난 날 등)';
+      document.getElementById('sinceOpt').hidden = mode !== 'since';
+      if (mode === 'since') { var d = parse(from.value || fmt(today)); to.value = fmt(new Date(d.getFullYear(), d.getMonth() - 3, d.getDate())); }
+      update();
+    });
+  });
+  [from, to, countFirst].forEach(function (el) { el.addEventListener('input', update); });
+  update();
+})();
+</script>
