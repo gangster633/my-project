@@ -10,7 +10,7 @@ import shutil
 from pathlib import Path
 
 SITE_NAME = "데일리툴"
-SITE_URL = "https://gangster633.github.io/my-project"  # 도메인 연결 후 예: "https://dailytool.kr"
+SITE_URL = "https://daytool.kr"
 ADSENSE_CLIENT = "ca-pub-9368731506053936"
 
 ROOT = Path(__file__).parent

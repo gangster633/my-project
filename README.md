@@ -32,13 +32,16 @@ python3 build.py
 
 ## 배포 (GitHub Pages)
 
-1. 이 브랜치를 `main`에 병합합니다.
-2. GitHub 저장소 → **Settings → Pages** → Source를 **Deploy from a branch**, 브랜치를 `main`, 폴더를 `/docs`로 저장합니다.
-3. 몇 분 뒤 `https://gangster633.github.io/my-project/` 에서 확인합니다.
+- 사이트 주소: https://daytool.kr
+- Settings → Pages: 브랜치 `claude/jolly-gates-b52r4q`, 폴더 `/docs`, Custom domain `daytool.kr`
+- `src/static/CNAME` 파일이 도메인을 지정합니다. 도메인을 바꾸면 이 파일과 `build.py`의 `SITE_URL`을 함께 바꾸고 다시 빌드합니다.
 
-## 도메인 연결 후
+### 가비아 DNS 설정
 
-1. `build.py` 맨 위의 `SITE_URL`을 새 도메인으로 바꾸고 `python3 build.py`를 실행합니다.
-2. `src/static/CNAME` 파일을 만들고 도메인 한 줄(예: `dailytool.kr`)을 적은 뒤 다시 빌드합니다.
-3. Settings → Pages → Custom domain에 도메인을 입력하고 **Enforce HTTPS**를 켭니다.
-4. AdSense → 사이트 → 사이트 추가에서 도메인을 등록하고 검토를 요청합니다.
+| 타입 | 호스트 | 값 |
+|---|---|---|
+| A | @ | 185.199.108.153 |
+| A | @ | 185.199.109.153 |
+| A | @ | 185.199.110.153 |
+| A | @ | 185.199.111.153 |
+| CNAME | www | gangster633.github.io. |

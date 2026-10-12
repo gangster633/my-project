@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://gangster633.github.io/my-project/sitemap.xml
+Sitemap: https://daytool.kr/sitemap.xml
