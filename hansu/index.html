@@ -55,6 +55,8 @@
 [hidden]{display:none !important}
 html{scroll-behavior:smooth;scroll-padding-top:80px}
 body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.7;word-break:keep-all;-webkit-font-smoothing:antialiased}
+/* 연한 바탕 아래 흐릿한 음식 사진 */
+body::before{content:"";position:fixed;inset:-60px;z-index:-1;background:url("images/bg.jpg") center/cover no-repeat;filter:blur(26px) saturate(1.15);opacity:.24;pointer-events:none}
 img,svg{display:block;max-width:100%}
 a{color:inherit}
 .wrap{max-width:var(--wrap);margin:0 auto;padding:0 24px}
@@ -159,7 +161,7 @@ section{padding:120px 0}
 .lineup-note p{margin:0;font-weight:600}
 
 /* industries */
-.industry{background:var(--paper-2)}
+.industry{background:rgba(235,225,207,.72)}
 .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px}
 .tab{font-family:var(--sans);font-size:15px;font-weight:700;padding:12px 22px;border-radius:999px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer;transition:background .2s,color .2s}
 .tab[aria-selected="true"]{background:var(--ink);color:var(--paper)}
@@ -209,7 +211,7 @@ section{padding:120px 0}
 .ledger-a p{margin:4px 0 0;font-size:15px;color:var(--ink-2)}
 
 /* story */
-.story{background:var(--paper-2)}
+.story{background:rgba(235,225,207,.72)}
 .story-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:72px;align-items:start}
 .story-body{margin-top:28px}
 .story-body p{margin:0 0 18px;color:var(--ink-2)}
