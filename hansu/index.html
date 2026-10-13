@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>한수 | 30년 육수베이스·스프·소스·엑기스 제조, 150kg부터 맞춤 개발</title>
 <meta name="description" content="30년 이상 육수베이스·스프·소스·엑기스를 만들어 온 식품원료 제조사 한수입니다. 맛 개발비 20만 원, 150kg부터 가게와 브랜드 전용 배합을 OEM·ODM으로 생산합니다.">
-<meta name="keywords" content="육수베이스, 육수 분말, 국물베이스, 콩나물국밥 육수, 멸치엑기스, 어묵스프, 어묵탕 스프, 떡볶이 분말, 고추장 소스, 만능소스, 제육볶음 소스, 소스 OEM, 양념 OEM, 소량 생산, 프랜차이즈 소스, 경남 양산, 부산">
+<meta name="keywords" content="육수베이스, 육수 분말, 국물베이스, 멸치엑기스, 어묵스프, 어묵탕 스프, 떡볶이 분말, 고추장 소스, 만능소스, 제육볶음 소스, 소스 OEM, 양념 OEM, 소량 생산, 프랜차이즈 업체 소스, 경남 양산, 부산">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="한수">
 <meta property="og:title" content="한수 | 가게의 맛을 공장의 배합으로">
@@ -105,14 +105,10 @@ section{padding:120px 0}
 .hero h1 em::after{content:"";position:absolute;left:0;right:0;bottom:.08em;height:.28em;background:var(--broth-soft);z-index:-1;border-radius:4px}
 .hero .lead{font-size:19px}
 .hero-cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:36px}
-.hero-art{position:relative;aspect-ratio:1/1;max-width:500px;justify-self:end;width:100%}
-.hero-art .disc{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 50% 55%, var(--broth-soft) 0 52%, transparent 53%)}
-.hero-art svg{position:relative;width:100%;height:100%}
-.steam path{stroke-dasharray:6 10;animation:steam 3.2s linear infinite}
-.steam path:nth-child(2){animation-delay:-1s}
-.steam path:nth-child(3){animation-delay:-2s}
-@keyframes steam{to{stroke-dashoffset:-64}}
-.stamp{position:absolute;top:6%;left:2%;width:118px;height:118px;border-radius:50%;background:var(--chili);color:#fff;display:grid;place-items:center;text-align:center;font-family:var(--serif);transform:rotate(-12deg);box-shadow:0 10px 30px rgba(178,58,31,.3)}
+.hero-art{position:relative;aspect-ratio:4/5;max-width:460px;justify-self:end;width:100%}
+.hero-art img{width:100%;height:100%;object-fit:cover;border-radius:230px 230px 20px 20px;box-shadow:0 30px 60px -20px rgba(31,26,21,.45)}
+.hero-art::after{content:"";position:absolute;inset:14px;border:1.5px solid rgba(244,237,224,.55);border-radius:216px 216px 12px 12px;pointer-events:none}
+.stamp{position:absolute;top:8%;left:-36px;z-index:1;width:118px;height:118px;border-radius:50%;background:var(--chili);color:#fff;display:grid;place-items:center;text-align:center;font-family:var(--serif);transform:rotate(-12deg);box-shadow:0 10px 30px rgba(178,58,31,.3)}
 .stamp b{display:block;font-size:34px;line-height:1;font-weight:900}
 .stamp small{font-size:12px;letter-spacing:.08em}
 .facts{margin-top:80px;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(3,1fr)}
@@ -310,7 +306,7 @@ footer{background:var(--ink);color:#bdb2a2;padding:64px 0 40px;font-size:14px}
 @media (prefers-reduced-motion: reduce){
   html{scroll-behavior:auto}
   .reveal{opacity:1;transform:none;transition:none}
-  .ticker-track,.steam path{animation:none}
+  .ticker-track{animation:none}
 }
 
 /* responsive */
@@ -336,7 +332,8 @@ footer{background:var(--ink);color:#bdb2a2;padding:64px 0 40px;font-size:14px}
   .hero{padding-top:40px}
   .hero-grid,.about-grid,.contact-grid,.faq-wrap,.sec-head,.panel{grid-template-columns:1fr}
   .sec-head{gap:16px;margin-bottom:40px}
-  .hero-art{max-width:340px;justify-self:center;order:-1}
+  .hero-art{max-width:300px;justify-self:center;order:-1}
+  .stamp{left:-24px}
   .stamp{width:92px;height:92px}
   .stamp b{font-size:26px}
   .facts{margin-top:48px}
@@ -403,39 +400,22 @@ footer{background:var(--ink);color:#bdb2a2;padding:64px 0 40px;font-size:14px}
       <div>
         <span class="eyebrow">육수베이스 · 스프 · 소스 · 엑기스</span>
         <h1>가게의 맛을<br><em>공장의 배합</em>으로<br>만듭니다.</h1>
-        <p class="lead">30년 넘게 식품원료를 만들어 온 한수입니다. 대형 어묵·육가공 기업과 국밥 프랜차이즈에 납품해 온 배합 기술로, 연구소가 없는 작은 가게와 브랜드도 자기만의 맛을 가질 수 있게 돕습니다.</p>
+        <p class="lead">30년 넘게 식품원료를 만들어 온 한수입니다. 대형 어묵·육가공 기업과 프랜차이즈 업체에 납품해 온 배합 기술로, 연구소가 없는 작은 가게와 브랜드도 자기만의 맛을 가질 수 있게 돕습니다.</p>
         <div class="hero-cta">
           <a class="btn btn-primary" href="#contact">맞춤 샘플 요청하기 <span class="arrow">→</span></a>
           <a class="btn btn-ghost" href="#products">제품 둘러보기</a>
         </div>
         <p class="hero-tel">전화 상담 <a href="tel:0553748432">055-374-8432</a> <span>· 팩스 055-374-8433</span></p>
       </div>
-      <div class="hero-art" aria-hidden="true">
-        <div class="disc"></div>
-        <svg viewBox="0 0 400 400" fill="none">
-          <g class="steam" stroke="#1f1a15" stroke-width="5" stroke-linecap="round">
-            <path d="M160 150c-18-22 18-36 0-58s18-36 0-58"/>
-            <path d="M200 140c-18-22 18-36 0-58s18-36 0-58"/>
-            <path d="M240 150c-18-22 18-36 0-58s18-36 0-58"/>
-          </g>
-          <ellipse cx="200" cy="205" rx="150" ry="34" fill="#c7903f"/>
-          <ellipse cx="200" cy="205" rx="150" ry="34" stroke="#1f1a15" stroke-width="5"/>
-          <circle cx="150" cy="200" r="7" fill="#f4ede0"/>
-          <circle cx="232" cy="210" r="5" fill="#f4ede0"/>
-          <circle cx="262" cy="198" r="9" fill="#b23a1f"/>
-          <path d="M178 198c10-6 24-6 34 0" stroke="#3f5b3a" stroke-width="5" stroke-linecap="round"/>
-          <path d="M120 212c8-4 18-4 26 0" stroke="#3f5b3a" stroke-width="5" stroke-linecap="round"/>
-          <path d="M50 205c0 80 66 132 150 132s150-52 150-132" fill="#1f1a15"/>
-          <path d="M84 250h232" stroke="#b23a1f" stroke-width="4" stroke-dasharray="2 12" stroke-linecap="round"/>
-          <path d="M150 337h100l-10 22h-80z" fill="#1f1a15"/>
-        </svg>
-        <div class="stamp"><div><b>30<small>년+</small></b><small>제조 업력</small></div></div>
+      <div class="hero-art">
+        <img src="images/hero.jpg" alt="뚝배기에 담긴 따뜻한 찌개" width="524" height="683">
+        <div class="stamp" aria-hidden="true"><div><b>30<small>년+</small></b><small>제조 업력</small></div></div>
       </div>
     </div>
     <div class="facts">
       <div class="fact reveal"><b>30<sup>년+</sup></b><span>식품원료 제조 업력</span></div>
       <div class="fact reveal"><b>83<sup>종</sup></b><span>엑기스·소스·시즈닝 표준 제품</span></div>
-      <div class="fact reveal"><b>3<sup>업종</sup></b><span>어묵 · 육가공 · 국밥 프랜차이즈 납품</span></div>
+      <div class="fact reveal"><b>3<sup>업종</sup></b><span>어묵 · 육가공 · 프랜차이즈 업체 납품</span></div>
     </div>
   </div>
 </section>
@@ -456,7 +436,7 @@ footer{background:var(--ink);color:#bdb2a2;padding:64px 0 40px;font-size:14px}
         <p class="about-quote">30년 동안 남의 이름으로 나간 국물 맛,<br>이제 <mark>사장님 가게의 이름</mark>으로 만들어 드립니다.</p>
       </div>
       <div class="about-body reveal">
-        <p>한수는 30년 이상 육수베이스, 스프, 소스, 엑기스 등 식품원료를 제조해 온 공장입니다. 대형 어묵·육가공 기업과 콩나물국밥 프랜차이즈의 생산 라인에 들어가는 원료를 만들며, 대량 생산에서도 맛이 흔들리지 않는 배합을 다듬어 왔습니다.</p>
+        <p>한수는 30년 이상 육수베이스, 스프, 소스, 엑기스 등 식품원료를 제조해 온 공장입니다. 대형 어묵·육가공 기업과 프랜차이즈 업체의 생산 라인에 들어가는 원료를 만들며, 대량 생산에서도 맛이 흔들리지 않는 배합을 다듬어 왔습니다.</p>
         <p>가게의 국물이나 원하는 맛을 알려주시면 같은 맛을 내는 전용 배합을 만들어 2~3주 안에 샘플을 보내드립니다. 완성된 레시피는 의뢰하신 분만 쓰도록 관리하고, 신제품 개발 의뢰도 받습니다.</p>
       </div>
     </div>
@@ -499,7 +479,7 @@ footer{background:var(--ink);color:#bdb2a2;padding:64px 0 40px;font-size:14px}
         <span class="eyebrow">주방 일지</span>
         <h2>주방에서 매일 하는 일,<br>한수에서는 한 번에 끝납니다</h2>
       </div>
-      <p>식당과 프랜차이즈에서 자주 듣는 이야기를 모았습니다. 오른쪽은 한수가 같은 일을 대신하는 방법입니다.</p>
+      <p>식당과 프랜차이즈 업체에서 자주 듣는 이야기를 모았습니다. 오른쪽은 한수가 같은 일을 대신하는 방법입니다.</p>
     </div>
     <div class="ledger">
       <div class="ledger-head" aria-hidden="true"><span>주방에서</span><span></span><span>한수에서</span></div>
@@ -540,12 +520,12 @@ footer{background:var(--ink);color:#bdb2a2;padding:64px 0 40px;font-size:14px}
         <span class="eyebrow">주력 제품</span>
         <h2>작은 가게를 위한<br>한수의 다섯 가지</h2>
       </div>
-      <p>프랜차이즈와 식품 공장에 납품하며 다듬은 제품을, 가게와 브랜드에 맞게 맛을 조절해 공급합니다. 육수 끓이는 시간과 양념 만드는 수고를 줄여 줍니다.</p>
+      <p>프랜차이즈 업체와 식품 공장에 납품하며 다듬은 제품을, 가게와 브랜드에 맞게 맛을 조절해 공급합니다. 육수 끓이는 시간과 양념 만드는 수고를 줄여 줍니다.</p>
     </div>
     <ol class="sig-list">
       <li class="sig-item reveal">
         <span class="sig-no">01</span>
-        <div class="sig-name"><h3>육수용베이스분말</h3><small>분말 · 프랜차이즈 납품 제품</small></div>
+        <div class="sig-name"><h3>육수용베이스분말</h3><small>분말 · 프랜차이즈 업체 납품 제품</small></div>
         <p class="sig-desc">물에 풀기만 하면 오래 끓인 듯한 감칠맛이 납니다. 육수 끓이는 시간과 인건비를 줄여 줍니다.</p>
         <div class="sig-use"><span>국밥</span><span>해장국</span><span>국수</span></div>
       </li>
@@ -553,7 +533,7 @@ footer{background:var(--ink);color:#bdb2a2;padding:64px 0 40px;font-size:14px}
         <span class="sig-no">02</span>
         <div class="sig-name"><h3>멸치맛엑기스</h3><small>액상 · 엑기스</small></div>
         <p class="sig-desc">멸치 육수를 따로 내지 않아도 매일 같은 깊은 멸치 맛을 냅니다. 볶음·조림 양념에도 씁니다.</p>
-        <div class="sig-use"><span>국수·우동</span><span>어묵탕</span><span>콩나물국밥</span></div>
+        <div class="sig-use"><span>국수·우동</span><span>어묵탕</span></div>
       </li>
       <li class="sig-item reveal">
         <span class="sig-no">03</span>
@@ -565,7 +545,7 @@ footer{background:var(--ink);color:#bdb2a2;padding:64px 0 40px;font-size:14px}
         <span class="sig-no">04</span>
         <div class="sig-name"><h3>떡볶이스프분말</h3><small>분말 · 맛 단계 조절</small></div>
         <p class="sig-desc">물만 붓고 끓이면 되는 떡볶이 스프입니다. 매운 정도와 단맛을 가게나 브랜드에 맞춥니다.</p>
-        <div class="sig-use"><span>떡볶이집</span><span>분식 프랜차이즈</span><span>밀키트</span></div>
+        <div class="sig-use"><span>떡볶이집</span><span>분식 프랜차이즈 업체</span><span>밀키트</span></div>
       </li>
       <li class="sig-item reveal">
         <span class="sig-no">05</span>
@@ -629,7 +609,7 @@ footer{background:var(--ink);color:#bdb2a2;padding:64px 0 40px;font-size:14px}
     </div>
     <div class="tabs" role="tablist" aria-label="업종 선택">
       <button class="tab" role="tab" id="tab-shop" aria-controls="p-shop" aria-selected="true">식당 · 밀키트</button>
-      <button class="tab" role="tab" id="tab-fran" aria-controls="p-fran" aria-selected="false" tabindex="-1">국밥 · 외식 프랜차이즈</button>
+      <button class="tab" role="tab" id="tab-fran" aria-controls="p-fran" aria-selected="false" tabindex="-1">외식 프랜차이즈 업체</button>
       <button class="tab" role="tab" id="tab-fish" aria-controls="p-fish" aria-selected="false" tabindex="-1">어묵 · 수산가공</button>
       <button class="tab" role="tab" id="tab-meat" aria-controls="p-meat" aria-selected="false" tabindex="-1">육가공</button>
     </div>
@@ -658,9 +638,9 @@ footer{background:var(--ink);color:#bdb2a2;padding:64px 0 40px;font-size:14px}
     <div class="panel" role="tabpanel" id="p-fran" aria-labelledby="tab-fran" hidden>
       <div>
         <h3>전국 가맹점 국물 맛을 하나로,<br>주방 일은 절반으로.</h3>
-        <p class="who">국밥·해장국·냉면 등 외식 프랜차이즈 본사 메뉴·구매 담당</p>
+        <p class="who">국밥·해장국·냉면 등 외식 프랜차이즈 업체 본사 메뉴·구매 담당</p>
         <ul class="points">
-          <li>콩나물국밥 프랜차이즈에 육수 원료를 납품하고 있습니다.</li>
+          <li>프랜차이즈 업체에 육수 원료를 납품하고 있습니다.</li>
           <li>직영점 국물을 분석해 같은 맛의 전용 농축 베이스를 만들고 블라인드 테스트를 거칩니다.</li>
           <li>통과한 배합은 브랜드 전용으로 OEM 생산해 물류센터로 공급합니다.</li>
         </ul>
@@ -668,7 +648,7 @@ footer{background:var(--ink);color:#bdb2a2;padding:64px 0 40px;font-size:14px}
       <table class="use-table">
         <thead><tr><th>메뉴</th><th>한수 제품</th></tr></thead>
         <tbody>
-          <tr><td>콩나물국밥 · 해장국</td><td>멸치엑기스, 사골엑기스, 전골육수베이스</td></tr>
+          <tr><td>국밥 · 해장국</td><td>멸치엑기스, 사골엑기스, 전골육수베이스</td></tr>
           <tr><td>순대국 · 돼지국밥 · 고기국수</td><td>사골엑기스, 마늘·생강·양파엑기스</td></tr>
           <tr><td>육개장 · 얼큰국밥</td><td>쇠고기맛엑기스, 홍고추소스(다대기)</td></tr>
           <tr><td>냉면 · 밀면</td><td>사골맛냉면육수, 동치미맛냉면육수, 메밀다시엑기스</td></tr>
@@ -758,7 +738,7 @@ footer{background:var(--ink);color:#bdb2a2;padding:64px 0 40px;font-size:14px}
       <span class="eyebrow">한수 이야기</span>
       <h2 style="margin-top:14px">30년 동안<br>공장 안에만 있던 맛</h2>
       <div class="story-body">
-        <p>한수의 제품은 대부분 다른 회사의 이름을 달고 식탁에 올랐습니다. 어묵 반죽 속 엑기스, 양념육 라인의 양념액, 국밥 프랜차이즈의 육수 원료가 모두 한수 공장에서 만들어졌습니다.</p>
+        <p>한수의 제품은 대부분 다른 회사의 이름을 달고 식탁에 올랐습니다. 어묵 반죽 속 엑기스, 양념육 라인의 양념액, 프랜차이즈 업체의 육수 원료가 모두 한수 공장에서 만들어졌습니다.</p>
         <p>맛은 배합으로 고정할 수 있고, 고정된 맛은 누가 끓여도 같습니다. 이제 그 기술을 연구소가 없는 작은 가게와 브랜드에도 나누려 합니다.</p>
       </div>
     </div>
@@ -767,7 +747,7 @@ footer{background:var(--ink);color:#bdb2a2;padding:64px 0 40px;font-size:14px}
       <ul class="track">
         <li><span>어묵 제조사</span><b>어묵용엑기스 · 어육엑기스 · 어묵스프</b></li>
         <li><span>육가공 기업</span><b>양념액 · 시즈닝 · 엑기스</b></li>
-        <li><span>콩나물국밥 프랜차이즈</span><b>육수 원료</b></li>
+        <li><span>프랜차이즈 업체</span><b>육수 원료</b></li>
         <li><span>장어 · 수산 가공</span><b>양념 · 소스</b></li>
         <li><span>일반 식당</span><b>표준 소스 · 엑기스</b></li>
       </ul>
@@ -833,7 +813,7 @@ footer{background:var(--ink);color:#bdb2a2;padding:64px 0 40px;font-size:14px}
         <label for="f-type">업종</label>
         <select id="f-type" name="type">
           <option>식당 · 외식 창업</option>
-          <option>외식 · 국밥 프랜차이즈 본사</option>
+          <option>외식 프랜차이즈 업체 본사</option>
           <option>밀키트 · 온라인 브랜드</option>
           <option>어묵 · 수산가공</option>
           <option>육가공 (햄·소시지·양념육·돈가스)</option>
@@ -865,7 +845,7 @@ footer{background:var(--ink);color:#bdb2a2;padding:64px 0 40px;font-size:14px}
           <option>새로 창업·출시 준비 중</option>
         </select>
       </div>
-      <div class="field"><label for="f-msg">원하는 맛 · 요청 사항</label><textarea id="f-msg" name="msg" placeholder="예) 지금 직접 끓이는 콩나물국밥 육수와 같은 맛, 조금 덜 짜게"></textarea></div>
+      <div class="field"><label for="f-msg">원하는 맛 · 요청 사항</label><textarea id="f-msg" name="msg" placeholder="예) 지금 직접 끓이는 국밥 육수와 같은 맛, 조금 덜 짜게"></textarea></div>
       <label class="consent" for="f-agree"><input type="checkbox" id="f-agree" name="agree"> 상담을 위해 상호와 연락처를 받는 데 동의합니다. 상담 외 다른 곳에는 쓰지 않습니다.</label>
       <p class="form-err" id="formErr" hidden></p>
       <div class="form-actions">
