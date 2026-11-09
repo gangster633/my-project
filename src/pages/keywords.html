@@ -185,6 +185,7 @@
       });
       var cats = Array.from(new Set(rows.map(function (r) { return r.cat; }))).sort();
       $('cat').insertAdjacentHTML('beforeend', cats.map(function (c) { return '<option>' + esc(c) + '</option>'; }).join(''));
+      if (!rows.some(function (r) { return r.golden != null; })) state.sort = 'monthly';
       $('updated').textContent = '갱신 ' + data.updated + ' (한국시간)';
       render();
     })

@@ -9,7 +9,8 @@
 
 필요한 환경변수 (GitHub 저장소 Settings > Secrets and variables > Actions 에 등록):
   NAVER_AD_API_KEY, NAVER_AD_SECRET, NAVER_AD_CUSTOMER_ID   검색광고 API
-  NAVER_CLIENT_ID, NAVER_CLIENT_SECRET                      네이버 개발자센터 검색 API
+  NAVER_CLIENT_ID, NAVER_CLIENT_SECRET                      네이버 개발자센터 검색 API (선택)
+    두 값이 없으면 블로그 문서 수·황금지수는 비워 두고 검색량만 모은다.
 
 표준 라이브러리만 사용한다.
 """
@@ -145,7 +146,10 @@ def main():
 
     history = json.loads(HISTORY.read_text(encoding="utf-8")) if HISTORY.exists() else {}
 
-    for n, it in enumerate(items, 1):
+    has_search = bool(os.environ.get("NAVER_CLIENT_ID", "").strip() and os.environ.get("NAVER_CLIENT_SECRET", "").strip())
+    if not has_search:
+        print("검색 API 키가 없어 블로그 문서 수는 건너뜁니다.")
+    for n, it in enumerate(items if has_search else [], 1):
         try:
             it["docs"] = blog_total(it["k"])
         except RuntimeError as e:
@@ -160,7 +164,7 @@ def main():
         monthly = it["pc"] + it["mo"]
         series = [p for p in history.get(it["k"], []) if p[0] != today] + [[today, monthly]]
         history[it["k"]] = series[-HISTORY_DAYS:]
-        docs = it["docs"]
+        docs = it.get("docs")
         rows.append([
             it["k"], it["cat"], it["pc"], it["mo"],
             docs,
