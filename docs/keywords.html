@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>황금 키워드 찾기 - 데일리툴</title>
+<meta name="description" content="네이버 월간 검색수와 블로그 문서 수로 검색량은 많고 경쟁 글은 적은 황금 키워드를 찾아 줍니다.">
+<link rel="canonical" href="https://daytool.kr/keywords.html">
+<meta name="robots" content="noindex">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="데일리툴">
+<meta property="og:title" content="황금 키워드 찾기 - 데일리툴">
+<meta property="og:description" content="네이버 월간 검색수와 블로그 문서 수로 검색량은 많고 경쟁 글은 적은 황금 키워드를 찾아 줍니다.">
+<meta property="og:url" content="https://daytool.kr/keywords.html">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/style.css">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9368731506053936" crossorigin="anonymous"></script>
+</head>
+<body>
+<header class="site-header">
+  <div class="wrap">
+    <a class="logo" href="./">데일리툴</a>
+    <nav class="nav"><a href="char-counter.html">글자수 세기</a><a href="age.html">만 나이 계산기</a><a href="dday.html">D-day 계산기</a><a href="percent.html">퍼센트 계산기</a><a href="pyeong.html">평수 계산기</a><a href="bmi.html">BMI 계산기</a><a href="loan.html">대출 이자 계산기</a><a href="wage.html">시급 월급 계산기</a></nav>
+  </div>
+</header>
+<main class="wrap">
+<style>
+.wrap { max-width: 1180px; }
+.kw-meta { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; color: var(--muted); font-size: .9rem; margin-bottom: 14px; }
+.kw-meta b { color: var(--text); font-size: 1.15rem; }
+.kw-tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-bottom: 14px; }
+.kw-tabs button { text-align: left; background: var(--surface); color: var(--text); border: 1px solid var(--line); padding: 10px 12px; font-weight: 700; line-height: 1.35; }
+.kw-tabs button small { display: block; font-weight: 400; color: var(--muted); font-size: .8rem; }
+.kw-tabs button[aria-selected="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.kw-table { font-size: .9rem; margin: 0; }
+.kw-table th, .kw-table td { border-width: 0 0 1px; white-space: nowrap; }
+.kw-table th { cursor: pointer; user-select: none; }
+.kw-table th[data-sort=""] { cursor: default; }
+.kw-table th.on { color: var(--accent); }
+.kw-table td.n, .kw-table th.n { text-align: right; font-variant-numeric: tabular-nums; }
+.kw-table td.kw { white-space: normal; min-width: 160px; }
+.kw-table td.kw a { color: var(--text); font-weight: 700; text-decoration: none; }
+.kw-table td.kw a:hover { color: var(--accent); }
+.kw-table td.kw small { display: block; color: var(--muted); font-size: .78rem; }
+.up { color: #15803d; } .down { color: #dc2626; }
+@media (prefers-color-scheme: dark) { .up { color: #4ade80; } .down { color: #f87171; } }
+.gold { font-weight: 800; color: #b45309; }
+@media (prefers-color-scheme: dark) { .gold { color: #fbbf24; } }
+.pager { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; align-items: center; margin-top: 14px; }
+.pager button { padding: 6px 12px; }
+.pager button:disabled { opacity: .4; cursor: default; }
+.empty { padding: 40px 10px; text-align: center; color: var(--muted); }
+</style>
+
+<h1>황금 키워드 찾기</h1>
+<p class="lead">네이버 검색량은 많은데 블로그 문서는 적은 키워드를 찾아 줍니다. 쇼핑·블로그 키워드 발굴에 쓰세요.</p>
+
+<div class="kw-meta"><span>현재 조건 <b id="count">-</b>개</span><span id="updated"></span></div>
+
+<div class="kw-tabs" role="tablist" id="tabs">
+  <button role="tab" data-tab="all" aria-selected="true">전체 보기<small>황금지수 높은 순</small></button>
+  <button role="tab" data-tab="rise1">전일 대비 상승<small>월간 검색수 10% 이상 증가</small></button>
+  <button role="tab" data-tab="rise7">7일 대비 상승<small>월간 검색수 30% 이상 증가</small></button>
+  <button role="tab" data-tab="top">검색량 상위<small>월 3만 회 이상</small></button>
+  <button role="tab" data-tab="few">문서 적음<small>문서 수 ≤ 월 검색수</small></button>
+</div>
+
+<div class="tool">
+  <div class="row">
+    <div class="field"><label for="q">키워드</label><input id="q" placeholder="상품명·브랜드·키워드"></div>
+    <div class="field"><label for="cat">쇼핑 분류</label><select id="cat"><option value="">전체 분류</option></select></div>
+    <div class="field"><label for="min">최소 월간 검색수</label><select id="min">
+      <option value="0">제한 없음</option><option value="1000">1,000 이상</option><option value="5000">5,000 이상</option><option value="10000">10,000 이상</option><option value="50000">50,000 이상</option>
+    </select></div>
+  </div>
+  <div class="table-scroll">
+    <table class="kw-table">
+      <thead><tr id="head">
+        <th class="n" data-sort="">순서</th>
+        <th data-sort="k">키워드</th>
+        <th class="n" data-sort="monthly">월간 검색<br><small>PC+모바일</small></th>
+        <th class="n" data-sort="daily">일 평균</th>
+        <th class="n" data-sort="docs">블로그 문서</th>
+        <th class="n" data-sort="ratio">문서/월검색</th>
+        <th class="n" data-sort="chg1">전일 대비</th>
+        <th class="n" data-sort="chg7">7일 대비</th>
+        <th data-sort="comp">광고 경쟁</th>
+        <th class="n on" data-sort="golden">황금지수 ↓</th>
+      </tr></thead>
+      <tbody id="body"><tr><td colspan="10" class="empty">불러오는 중…</td></tr></tbody>
+    </table>
+  </div>
+  <div class="pager" id="pager"></div>
+</div>
+
+<section class="content">
+  <h2>황금지수는 어떻게 계산하나요?</h2>
+  <p>블로그 문서 수를 월간 검색수로 나눈 값(문서/월검색)이 작을수록 경쟁 글이 적다는 뜻입니다. 여기에 검색량이 충분한지를 함께 반영해 0~100점으로 나타냅니다. 월 검색수가 1만 회 이상이고 문서가 거의 없으면 100점에 가깝습니다.</p>
+  <h2>데이터 출처와 갱신 주기</h2>
+  <ul>
+    <li><strong>월간 검색수</strong>: 네이버 검색광고 키워드도구가 제공하는 최근 30일 PC·모바일 검색수입니다. 일 평균은 이를 30으로 나눈 값입니다.</li>
+    <li><strong>블로그 문서 수</strong>: 네이버 블로그 검색 결과 수입니다.</li>
+    <li><strong>전일·7일 대비</strong>: 매일 수집한 월간 검색수를 비교한 변화율입니다. 수집이 며칠 쌓여야 표시됩니다.</li>
+  </ul>
+  <p>데이터는 하루 한 번 새벽에 갱신됩니다. 수치는 참고용이며 실제 검색량과 차이가 있을 수 있습니다.</p>
+</section>
+
+<script>
+(function () {
+  var PAGE = 50;
+  var TABS = {
+    all: function () { return true; },
+    rise1: function (r) { return r.chg1 != null && r.chg1 >= 10; },
+    rise7: function (r) { return r.chg7 != null && r.chg7 >= 30; },
+    top: function (r) { return r.monthly >= 30000; },
+    few: function (r) { return r.ratio != null && r.ratio <= 1; }
+  };
+  var state = { tab: 'all', sort: 'golden', dir: -1, page: 0 };
+  var rows = [];
+  var $ = function (id) { return document.getElementById(id); };
+  var fmt = function (n) { return n == null ? '-' : Number(n).toLocaleString('ko-KR'); };
+  var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  function pct(v) {
+    if (v == null) return '<span style="color:var(--muted)">-</span>';
+    var cls = v > 0 ? 'up' : v < 0 ? 'down' : '';
+    return '<span class="' + cls + '">' + (v > 0 ? '+' : '') + v.toFixed(1) + '%</span>';
+  }
+
+  function filtered() {
+    var q = $('q').value.trim().replace(/\s+/g, '').toLowerCase();
+    var cat = $('cat').value, min = Number($('min').value), tab = TABS[state.tab];
+    var list = rows.filter(function (r) {
+      return (!q || r.k.toLowerCase().indexOf(q) !== -1) && (!cat || r.cat === cat) && r.monthly >= min && tab(r);
+    });
+    var key = state.sort, dir = state.dir;
+    list.sort(function (a, b) {
+      var x = a[key], y = b[key];
+      if (x == null && y == null) return 0;
+      if (x == null) return 1;
+      if (y == null) return -1;
+      if (typeof x === 'string') return x.localeCompare(y, 'ko') * dir;
+      return (x - y) * dir;
+    });
+    return list;
+  }
+
+  function render() {
+    var list = filtered();
+    var pages = Math.max(1, Math.ceil(list.length / PAGE));
+    state.page = Math.min(state.page, pages - 1);
+    $('count').textContent = fmt(list.length);
+    var start = state.page * PAGE;
+    var html = list.slice(start, start + PAGE).map(function (r, i) {
+      return '<tr><td class="n">' + (start + i + 1) + '</td>' +
+        '<td class="kw"><a href="https://search.naver.com/search.naver?query=' + encodeURIComponent(r.k) + '" target="_blank" rel="noopener">' + esc(r.k) + '</a><small>' + esc(r.cat) + ' · PC ' + fmt(r.pc) + ' / 모바일 ' + fmt(r.mo) + '</small></td>' +
+        '<td class="n">' + fmt(r.monthly) + '</td>' +
+        '<td class="n">' + fmt(r.daily) + '</td>' +
+        '<td class="n">' + fmt(r.docs) + '</td>' +
+        '<td class="n">' + (r.ratio == null ? '-' : r.ratio.toFixed(3)) + '</td>' +
+        '<td class="n">' + pct(r.chg1) + '</td>' +
+        '<td class="n">' + pct(r.chg7) + '</td>' +
+        '<td>' + esc(r.comp || '-') + '</td>' +
+        '<td class="n gold">' + (r.golden == null ? '-' : r.golden.toFixed(1)) + '</td></tr>';
+    }).join('');
+    $('body').innerHTML = html || '<tr><td colspan="10" class="empty">조건에 맞는 키워드가 없습니다.</td></tr>';
+    $('pager').innerHTML = pages > 1
+      ? '<button class="secondary" data-p="-1"' + (state.page === 0 ? ' disabled' : '') + '>이전</button>' +
+        '<span>' + (state.page + 1) + ' / ' + pages + '</span>' +
+        '<button class="secondary" data-p="1"' + (state.page >= pages - 1 ? ' disabled' : '') + '>다음</button>'
+      : '';
+    Array.prototype.forEach.call(document.querySelectorAll('#head th'), function (th) {
+      var on = th.dataset.sort === state.sort;
+      th.classList.toggle('on', on);
+      th.innerHTML = th.innerHTML.replace(/ [↑↓]$/, '') + (on ? (state.dir < 0 ? ' ↓' : ' ↑') : '');
+    });
+  }
+
+  $('tabs').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    Array.prototype.forEach.call(this.children, function (x) { x.setAttribute('aria-selected', x === b); });
+    state.tab = b.dataset.tab; state.page = 0;
+    if (state.tab === 'rise1') { state.sort = 'chg1'; state.dir = -1; }
+    else if (state.tab === 'rise7') { state.sort = 'chg7'; state.dir = -1; }
+    else if (state.tab === 'top') { state.sort = 'monthly'; state.dir = -1; }
+    else { state.sort = 'golden'; state.dir = -1; }
+    render();
+  });
+  $('head').addEventListener('click', function (e) {
+    var th = e.target.closest('th'); if (!th || !th.dataset.sort) return;
+    if (state.sort === th.dataset.sort) state.dir = -state.dir;
+    else { state.sort = th.dataset.sort; state.dir = th.dataset.sort === 'k' || th.dataset.sort === 'ratio' ? 1 : -1; }
+    state.page = 0; render();
+  });
+  $('pager').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b || b.disabled) return;
+    state.page += Number(b.dataset.p); render(); window.scrollTo({ top: $('tabs').offsetTop - 10 });
+  });
+  ['q', 'cat', 'min'].forEach(function (id) {
+    $(id).addEventListener('input', function () { state.page = 0; render(); });
+  });
+
+  fetch('data/keywords.json', { cache: 'no-cache' })
+    .then(function (res) { if (!res.ok) throw new Error(res.status); return res.json(); })
+    .then(function (data) {
+      var f = data.fields;
+      rows = data.rows.map(function (a) {
+        var r = {}; f.forEach(function (name, i) { r[name] = a[i]; });
+        var monthly = r.pc + r.mobile;
+        return { k: r.keyword, cat: r.category, pc: r.pc, mo: r.mobile, monthly: monthly, daily: Math.round(monthly / 30),
+          docs: r.docs, ratio: r.ratio, golden: r.golden, chg1: r.chg1, chg7: r.chg7, comp: r.comp };
+      });
+      var cats = Array.from(new Set(rows.map(function (r) { return r.cat; }))).sort();
+      $('cat').insertAdjacentHTML('beforeend', cats.map(function (c) { return '<option>' + esc(c) + '</option>'; }).join(''));
+      if (!rows.some(function (r) { return r.golden != null; })) state.sort = 'monthly';
+      $('updated').textContent = '갱신 ' + data.updated + ' (한국시간)';
+      render();
+    })
+    .catch(function () {
+      $('count').textContent = '0';
+      $('body').innerHTML = '<tr><td colspan="10" class="empty">아직 수집된 데이터가 없습니다. 첫 수집 후 표시됩니다.</td></tr>';
+    });
+})();
+</script>
+</main>
+<footer class="site-footer">
+  <div class="wrap">
+    <p><a href="about.html">사이트 소개</a> · <a href="privacy.html">개인정보처리방침</a> · <a href="contact.html">문의하기</a></p>
+    <p>계산 결과는 참고용이며, 중요한 결정은 관련 기관이나 전문가에게 확인하세요.</p>
+    <p>&copy; 2026 데일리툴</p>
+  </div>
+</footer>
+</body>
+</html>
