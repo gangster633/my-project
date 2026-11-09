@@ -33,6 +33,11 @@ PAGES = [
     ("privacy", "개인정보처리방침", f"{SITE_NAME}의 개인정보처리방침과 쿠키, 광고(Google AdSense) 관련 안내입니다."),
     ("contact", "문의하기", f"{SITE_NAME}에 대한 문의, 오류 제보, 도구 추가 요청 방법을 안내합니다."),
 ]
+# 만들기는 하지만 메뉴·사이트맵에 넣지 않고 검색엔진 색인도 막는 페이지 (공개 전 테스트용).
+# 공개할 때는 TOOLS 로 옮기면 된다.
+HIDDEN = [
+    ("keywords", "황금 키워드 찾기", "네이버 월간 검색수와 블로그 문서 수로 검색량은 많고 경쟁 글은 적은 황금 키워드를 찾아 줍니다."),
+]
 
 LAYOUT = """<!doctype html>
 <html lang="ko">
@@ -41,7 +46,7 @@ LAYOUT = """<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{full_title}</title>
 <meta name="description" content="{desc}">
-<link rel="canonical" href="{url}">
+<link rel="canonical" href="{url}">{robots}
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="{site}">
 <meta property="og:title" content="{full_title}">
@@ -73,7 +78,7 @@ LAYOUT = """<!doctype html>
 """
 
 
-def render(slug, title, desc, body):
+def render(slug, title, desc, body, hidden=False):
     path = "" if slug == "index" else f"{slug}.html"
     current = ' aria-current="page"'
     nav = "".join(
@@ -89,6 +94,7 @@ def render(slug, title, desc, body):
         nav=nav,
         body=body.strip(),
         year=datetime.date.today().year,
+        robots='\n<meta name="robots" content="noindex">' if hidden else "",
     )
 
 
@@ -108,6 +114,9 @@ def main():
     for slug, title, desc in TOOLS + PAGES:
         body = (SRC / "pages" / f"{slug}.html").read_text(encoding="utf-8")
         (OUT / f"{slug}.html").write_text(render(slug, title, desc, body), encoding="utf-8")
+    for slug, title, desc in HIDDEN:
+        body = (SRC / "pages" / f"{slug}.html").read_text(encoding="utf-8")
+        (OUT / f"{slug}.html").write_text(render(slug, title, desc, body, hidden=True), encoding="utf-8")
 
     today = datetime.date.today().isoformat()
     urls = [""] + [f"{s}.html" for s, _, _ in TOOLS + PAGES]
