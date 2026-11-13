@@ -59,10 +59,10 @@ def related_keywords(keys, hints):
 
 
 def blog_total(keys, keyword):
-    """검색 API: 블로그 문서 수."""
-    headers = {"X-Naver-Client-Id": keys["client_id"], "X-Naver-Client-Secret": keys["client_secret"]}
+    """NAVER API HUB 블로그 검색: 블로그 문서 수. (2026년 개발자센터 검색 API가 API HUB로 이전됨)"""
+    headers = {"X-NCP-APIGW-API-KEY-ID": keys["client_id"], "X-NCP-APIGW-API-KEY": keys["client_secret"]}
     q = urllib.parse.urlencode({"query": keyword, "display": 1})
-    return int(_get_json(f"https://openapi.naver.com/v1/search/blog.json?{q}", headers).get("total", 0))
+    return int(_get_json(f"https://naverapihub.apigw.ntruss.com/search/v1/blog?{q}", headers).get("total", 0))
 
 
 def golden_index(monthly, docs):

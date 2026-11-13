@@ -9,7 +9,7 @@
 
 필요한 환경변수 (GitHub 저장소 Settings > Secrets and variables > Actions 에 등록):
   NAVER_AD_API_KEY, NAVER_AD_SECRET, NAVER_AD_CUSTOMER_ID   검색광고 API
-  NAVER_CLIENT_ID, NAVER_CLIENT_SECRET                      네이버 개발자센터 검색 API (선택)
+  NAVER_CLIENT_ID, NAVER_CLIENT_SECRET                      NAVER API HUB(ncloud.com) 블로그 검색 API (선택)
     두 값이 없으면 블로그 문서 수·황금지수는 비워 두고 검색량만 모은다.
 
 표준 라이브러리만 사용한다.
@@ -147,9 +147,10 @@ def collect_volumes(seeds):
 # ---------- 검색 API: 블로그 문서 수 ----------
 
 def blog_total(keyword):
-    headers = {"X-Naver-Client-Id": env("NAVER_CLIENT_ID"), "X-Naver-Client-Secret": env("NAVER_CLIENT_SECRET")}
+    # 2026년부터 네이버 검색 API는 NAVER API HUB(네이버 클라우드)로 옮겨졌다. 개발자센터 옛 키는 쓸 수 없다.
+    headers = {"X-NCP-APIGW-API-KEY-ID": env("NAVER_CLIENT_ID"), "X-NCP-APIGW-API-KEY": env("NAVER_CLIENT_SECRET")}
     q = urllib.parse.urlencode({"query": keyword, "display": 1})
-    return int(http_json(f"https://openapi.naver.com/v1/search/blog.json?{q}", headers).get("total", 0))
+    return int(http_json(f"https://naverapihub.apigw.ntruss.com/search/v1/blog?{q}", headers).get("total", 0))
 
 
 # ---------- 지표 계산 ----------
@@ -191,6 +192,9 @@ def main():
         except RuntimeError as e:
             print(f"  문서 수 실패 {it['k']}: {e}")
             it["docs"] = None
+            if "HTTP 401" in str(e) or "HTTP 403" in str(e):
+                print("검색 API 키가 올바르지 않아 블로그 문서 수 조회를 멈춥니다. Secrets 를 확인하세요.")
+                break
         if n % 200 == 0:
             print(f"  {n}/{len(doc_targets)}")
         time.sleep(0.12)  # 초당 10회 제한

@@ -31,7 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import naver  # noqa: E402
 
 APP_NAME = "황금 키워드 찾기"
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 # PyInstaller로 묶으면 리소스는 _MEIPASS 아래에 풀린다.
 BASE = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
 DATA_DIR = Path(os.environ.get("KEYWORD_FINDER_HOME") or (Path(os.environ.get("APPDATA", Path.home())) / "KeywordFinder"))
