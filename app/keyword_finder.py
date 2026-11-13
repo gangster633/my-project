@@ -31,7 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import naver  # noqa: E402
 
 APP_NAME = "황금 키워드 찾기"
-VERSION = "0.3.0"
+VERSION = "0.4.0"
 # PyInstaller로 묶으면 리소스는 _MEIPASS 아래에 풀린다.
 BASE = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
 DATA_DIR = Path(os.environ.get("KEYWORD_FINDER_HOME") or (Path(os.environ.get("APPDATA", Path.home())) / "KeywordFinder"))
@@ -134,6 +134,22 @@ def all_rows():
     return rows
 
 
+def recategorize_all():
+    """분류 사전이 바뀐 새 버전에서 이미 모은 키워드의 분류를 다시 매긴다. 사전에 안 걸리면 기존 분류를 유지."""
+    con = db()
+    rows = con.execute("SELECT k, seed, cat FROM keywords").fetchall()
+    changes = []
+    for k, seed, cat in rows:
+        fallback = categorize(seed, cat) if seed and cat == "기타" else cat
+        new = categorize(k, fallback or "기타")
+        if new != cat:
+            changes.append((new, k))
+    con.executemany("UPDATE keywords SET cat=? WHERE k=?", changes)
+    con.commit()
+    con.close()
+    return len(changes)
+
+
 # ---------------- 수집 작업 ----------------
 
 job = {"running": False, "done": 0, "total": 0, "message": "대기 중", "error": None, "added": 0}
@@ -163,7 +179,8 @@ def run_collect(seeds, category, want_docs, min_monthly, max_docs, want_trend=Tr
         day = today()
         con = db()
         for r in found.values():
-            cat = category or categorize(r["k"], "기타")
+            # 사전에 없는 키워드는 씨앗 키워드의 분류를 따라간다
+            cat = category or categorize(r["k"], categorize(r["seed"], "기타"))
             con.execute(
                 """INSERT INTO keywords (k, cat, pc, mo, comp, seed, updated_at) VALUES (?,?,?,?,?,?,?)
                    ON CONFLICT(k) DO UPDATE SET cat=excluded.cat, pc=excluded.pc, mo=excluded.mo,
@@ -410,6 +427,14 @@ def main():
     url = f"http://127.0.0.1:{server.server_address[1]}/"
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     RUNNING.write_text(json.dumps({"url": url, "token": TOKEN}), encoding="utf-8")
+    cfg = load_config()
+    if cfg.get("categorized_version") != VERSION:  # 새 버전 첫 실행: 분류 다시 매기기
+        try:
+            print(f"분류 다시 매김: {recategorize_all():,}개")
+            cfg["categorized_version"] = VERSION
+            save_config(cfg)
+        except sqlite3.Error as e:
+            print("분류 다시 매기기 실패:", e)
     print(f"{APP_NAME} {VERSION} 실행 중: {url}")
     print(f"데이터 폴더: {DATA_DIR}")
     if os.environ.get("KEYWORD_FINDER_NO_WINDOW"):

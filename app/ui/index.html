@@ -34,7 +34,13 @@ aside { width: 220px; flex: none; background: var(--side); color: var(--side-tex
 .brand b { display: block; color: #fff; font-size: 15px; }
 .brand small { color: var(--side-dim); font-size: 12px; }
 .menu { display: flex; gap: 4px; padding: 0 2px 12px; border-bottom: 1px solid #252c38; }
-.menu button { flex: 1; background: none; color: var(--side-text); font-weight: 500; padding: 7px 4px; font-size: 13px; }
+.menu button { flex: 1; background: none; color: var(--side-text); font-weight: 500; padding: 7px 2px; font-size: 12.5px; }
+.help h2 { font-size: 17px; margin: 0 0 10px; }
+.help table { margin: 4px 0; }
+.help td, .help th { padding: 8px 10px; white-space: normal; }
+.help ol, .help ul { margin: 6px 0; padding-left: 20px; }
+.help li { margin: 4px 0; }
+.help .tip { background: var(--accent-soft); border-radius: 10px; padding: 12px 14px; margin-top: 10px; }
 .menu button[aria-current] { background: #283041; color: #fff; }
 .cats { overflow: auto; flex: 1; padding-top: 12px; }
 .cats .h { font-size: 12px; color: var(--side-dim); padding: 0 8px 8px; }
@@ -124,6 +130,7 @@ section[hidden] { display: none; }
     <button data-view="list" aria-current="page">키워드</button>
     <button data-view="collect">수집</button>
     <button data-view="settings">설정</button>
+    <button data-view="help">사용법</button>
   </nav>
   <div class="cats" id="cats"></div>
   <button class="quit" id="quit">프로그램 종료</button>
@@ -278,6 +285,82 @@ section[hidden] { display: none; }
       <p class="dim" style="margin:4px 0 10px">저장 위치: <span id="data-dir"></span></p>
       <button class="ghost" id="wipe">수집한 키워드 모두 지우기</button>
     </div>
+
+  </section>
+
+  <!-- 사용법 -->
+  <section id="view-help" class="help" hidden>
+    <div class="crumb">사용법</div>
+    <div class="title-row"><h1>사용법</h1></div>
+
+    <div class="panel">
+      <h2>1. 매일 루틴 (5~10분)</h2>
+      <ol>
+        <li><b>수집</b>에서 씨앗 키워드를 붙여넣고 <b>수집 시작</b>. 씨앗은 메모장에 저장해 두고 매일 같은 것을 쓰세요.</li>
+        <li>끝나면 <b>키워드</b>로 가서 <b>최신 자료 기준만</b>을 체크 → <b>조건 적용</b>.</li>
+        <li>아래 탭을 차례로 눌러 후보를 고르고, <b>엑셀(CSV) 저장</b>으로 모아 둡니다.</li>
+      </ol>
+      <div class="tip">수집은 <b>하루 한 번, 오전 9시 이후</b>가 좋습니다. 네이버가 전날 데이터를 그때쯤 채웁니다. 30일 그래프는 수집할 때마다 지난 30일치를 한꺼번에 받으므로 며칠 걸러도 비지 않지만, <b>하루 급등</b>을 빨리 잡으려면 매일 하세요.</div>
+    </div>
+
+    <div class="panel">
+      <h2>2. 숫자 읽는 법</h2>
+      <table>
+        <tr><th>항목</th><th>뜻</th><th>이렇게 보세요</th></tr>
+        <tr><td><b>일 검색량</b></td><td>어제 하루 네이버 검색 횟수(추정)</td><td>100 미만은 유입이 적음. 300~5,000이 개인이 공략하기 좋음</td></tr>
+        <tr><td><b>월간 합계</b></td><td>최근 30일 검색 합(PC/모바일)</td><td>모바일 비중이 높으면 블로그·스토어에 유리</td></tr>
+        <tr><td><b>3일 평균 증가율</b></td><td>최근 3일 평균 vs 그 전 3일</td><td><b>+30% 이상 = 뜨는 중</b>. 지금 쓰면 선점</td></tr>
+        <tr><td><b>전일 대비</b></td><td>어제 vs 그저께</td><td>하루짜리 반짝일 수 있어 그래프와 함께 보기</td></tr>
+        <tr><td><b>블로그 문서 수</b></td><td>이 키워드로 쓴 블로그 글 수</td><td>적을수록 상위 노출이 쉬움</td></tr>
+        <tr><td><b>문서/월검색</b></td><td>검색 1번당 글 수</td><td><b>0.5 이하 = 글이 부족</b>. 1 이상은 경쟁이 셈</td></tr>
+        <tr><td><b>황금지수</b></td><td>검색은 많고 글은 적은 정도(0~100)</td><td><b>70 이상 우선 공략</b>, 50 미만은 경쟁이 셈</td></tr>
+        <tr><td><b>광고 경쟁</b></td><td>광고주 경쟁 정도</td><td>높음 = 사려는 사람이 많아 돈이 되는 키워드</td></tr>
+      </table>
+    </div>
+
+    <div class="panel">
+      <h2>3. 30일 그래프 모양</h2>
+      <ul>
+        <li><b>오른쪽 끝이 치솟음</b>: 지금 뜨는 키워드. <b>오늘 바로</b> 쓰세요.</li>
+        <li><b>꾸준히 평평함</b>: 늘 찾는 키워드. 오래 유입되는 정보성 글에 좋습니다.</li>
+        <li><b>가운데 봉우리 후 하락</b>: 이미 지나간 이슈. 피하세요.</li>
+        <li><b>톱니 모양</b>: 주말·요일을 타는 키워드. 올라가는 요일 전에 발행하세요.</li>
+      </ul>
+    </div>
+
+    <div class="panel">
+      <h2>4. 탭별 활용</h2>
+      <table>
+        <tr><th>탭</th><th>언제 쓰나</th></tr>
+        <tr><td><b>전체 보기</b></td><td>황금지수 순으로 오래 쓸 기본 글감 찾기</td></tr>
+        <tr><td><b>하루 급등</b></td><td>오늘 터진 키워드. 빠르게 쓰는 사람이 이깁니다</td></tr>
+        <tr><td><b>3일 평균 상승</b></td><td>며칠째 오르는 중. 급등보다 믿을 만한 상승세</td></tr>
+        <tr><td><b>7일 평균 상승</b></td><td>시즌 시작. 시리즈 글·상품 준비</td></tr>
+        <tr><td><b>검색량 상위</b></td><td>큰 키워드. 경쟁이 세니 세부 키워드를 찾는 출발점으로</td></tr>
+        <tr><td><b>검색 대비 문서 적음</b></td><td>글이 부족한 틈새. 신생 블로그에 가장 좋음</td></tr>
+      </table>
+    </div>
+
+    <div class="panel">
+      <h2>5. 좋은 키워드 고르는 공식</h2>
+      <ol>
+        <li><b>상세 필터</b>에서 일 검색량 최소 <b>100</b>, 황금지수 최소 <b>70</b> → 기본 글감</li>
+        <li>여기에 <b>3일 평균 상승</b> 탭 → 오늘 쓸 글감</li>
+        <li>여기에 광고 경쟁 <b>높음</b> → 애드센스 단가·판매로 이어지기 좋은 글감</li>
+      </ol>
+      <div class="tip">예) 일 1,652 · 3일 +114% · 문서 115 · 황금 99.5 → 검색은 늘고 글은 거의 없음. <b>최우선으로 오늘 쓰세요.</b></div>
+    </div>
+
+    <div class="panel">
+      <h2>6. 씨앗 늘리는 요령과 주의할 점</h2>
+      <ul>
+        <li>쓸 만한 키워드를 찾으면 <b>다음 날 씨앗에 추가</b>하세요. 더 세부적인 연관 키워드가 나옵니다.</li>
+        <li>시즌에 맞춰 씨앗을 바꾸세요. 12월 크리스마스·연말, 2월 졸업·입학, 5월 어버이날.</li>
+        <li><b>일 검색량은 추정값</b>입니다. 월간 검색수를 데이터랩 일별 비율로 나눈 값이라 흐름을 보는 용도로 쓰세요.</li>
+        <li><b>문서 수 0</b>은 네이버가 걸러 내는 검색어(성인 등)일 수 있습니다. 키워드를 눌러 복사한 뒤 직접 검색해 확인하세요.</li>
+        <li>유명 브랜드명은 공식 사이트가 상위를 차지해 들어가기 어려울 수 있습니다.</li>
+      </ul>
+    </div>
   </section>
 </main>
 <div class="toast" id="toast"></div>
@@ -297,7 +380,7 @@ section[hidden] { display: none; }
 
   // ---------- 화면 전환 ----------
   function show(view) {
-    ['list', 'collect', 'settings'].forEach(function (v) { $('view-' + v).hidden = v !== view; });
+    ['list', 'collect', 'settings', 'help'].forEach(function (v) { $('view-' + v).hidden = v !== view; });
     Array.prototype.forEach.call($('menu').children, function (b) { if (b.dataset.view === view) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
     if (view === 'list') load();
     if (view === 'settings') loadConfig();
