@@ -15,6 +15,7 @@
 표준 라이브러리만 사용한다.
 """
 import base64
+import csv
 import datetime
 import hashlib
 import hmac
@@ -33,8 +34,10 @@ SEEDS = ROOT / "collector" / "seeds.txt"
 CATEGORIES = ROOT / "collector" / "categories.txt"
 OUT = ROOT / "src" / "static" / "data" / "keywords.json"
 HISTORY = ROOT / "data" / "history.json"
+DAILY = ROOT / "data" / "daily"  # 날짜별 전체 수집 기록 (지우지 않고 계속 쌓는다)
 
-MAX_KEYWORDS = int(os.environ.get("MAX_KEYWORDS", "3000"))  # 문서 수를 셀 최대 키워드 수 (검색 API 하루 25,000회 한도)
+MAX_KEYWORDS = int(os.environ.get("MAX_KEYWORDS", "10000"))  # 사이트에 보여줄 최대 키워드 수 (날짜별 기록에는 전부 저장)
+MAX_DOCS = int(os.environ.get("MAX_DOCS", "3000"))            # 블로그 문서 수를 셀 최대 키워드 수 (검색 API 하루 25,000회 한도)
 MIN_MONTHLY = int(os.environ.get("MIN_MONTHLY", "100"))     # 월간 검색수가 이보다 적으면 버림
 HISTORY_DAYS = 35
 KST = datetime.timezone(datetime.timedelta(hours=9))
@@ -172,22 +175,24 @@ def main():
     words = load_category_words()
     for it in found.values():
         it["cat"] = categorize(it["k"], it["cat"], words)
-    items = sorted(found.values(), key=lambda x: x["pc"] + x["mo"], reverse=True)[:MAX_KEYWORDS]
-    print(f"연관 키워드 {len(found)}개 중 {len(items)}개 문서 수 조회")
+    ranked = sorted(found.values(), key=lambda x: x["pc"] + x["mo"], reverse=True)
+    items = ranked[:MAX_KEYWORDS]
+    print(f"연관 키워드 {len(found)}개 수집, 사이트에는 {len(items)}개 표시")
 
     history = json.loads(HISTORY.read_text(encoding="utf-8")) if HISTORY.exists() else {}
 
     has_search = bool(os.environ.get("NAVER_CLIENT_ID", "").strip() and os.environ.get("NAVER_CLIENT_SECRET", "").strip())
     if not has_search:
         print("검색 API 키가 없어 블로그 문서 수는 건너뜁니다.")
-    for n, it in enumerate(items if has_search else [], 1):
+    doc_targets = items[:MAX_DOCS] if has_search else []
+    for n, it in enumerate(doc_targets, 1):
         try:
             it["docs"] = blog_total(it["k"])
         except RuntimeError as e:
             print(f"  문서 수 실패 {it['k']}: {e}")
             it["docs"] = None
         if n % 200 == 0:
-            print(f"  {n}/{len(items)}")
+            print(f"  {n}/{len(doc_targets)}")
         time.sleep(0.12)  # 초당 10회 제한
 
     rows = []
@@ -219,6 +224,16 @@ def main():
     OUT.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     HISTORY.write_text(json.dumps(history, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print(f"저장 완료: {len(rows)}개 -> {OUT.relative_to(ROOT)}")
+
+    # 날짜별 기록: 그날 찾은 키워드 전부를 엑셀에서 바로 열리는 CSV로 남긴다.
+    DAILY.mkdir(parents=True, exist_ok=True)
+    daily = DAILY / f"{today}.csv"
+    with daily.open("w", encoding="utf-8-sig", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["keyword", "category", "pc", "mobile", "total", "blog_docs", "comp"])
+        for it in ranked:
+            w.writerow([it["k"], it["cat"], it["pc"], it["mo"], it["pc"] + it["mo"], it.get("docs", ""), it["comp"]])
+    print(f"날짜별 기록: {len(ranked)}개 -> {daily.relative_to(ROOT)}")
 
 
 def recategorize():
