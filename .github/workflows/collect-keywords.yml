@@ -1,8 +1,9 @@
 name: 키워드 수집
 
 on:
-  schedule:
-    - cron: "17 20 * * *"   # 매일 한국시간 새벽 5시 17분
+  # 매일 자동 수집은 잠시 멈춤. 다시 켜려면 아래 두 줄의 맨 앞 "# "을 지우세요.
+  # schedule:
+  #   - cron: "17 20 * * *"   # 매일 한국시간 새벽 5시 17분
   workflow_dispatch:         # Actions 탭에서 수동 실행
 
 permissions:
