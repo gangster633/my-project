@@ -34,10 +34,12 @@ SEEDS = ROOT / "collector" / "seeds.txt"
 CATEGORIES = ROOT / "collector" / "categories.txt"
 OUT = ROOT / "src" / "static" / "data" / "keywords.json"
 HISTORY = ROOT / "data" / "history.json"
+DOCS_CACHE = ROOT / "data" / "docs.json"  # {키워드: [문서 수, 센 날짜]}
 DAILY = ROOT / "data" / "daily"  # 날짜별 전체 수집 기록 (지우지 않고 계속 쌓는다)
 
 MAX_KEYWORDS = int(os.environ.get("MAX_KEYWORDS", "10000"))  # 사이트에 보여줄 최대 키워드 수 (날짜별 기록에는 전부 저장)
-MAX_DOCS = int(os.environ.get("MAX_DOCS", "3000"))            # 블로그 문서 수를 셀 최대 키워드 수 (검색 API 하루 25,000회 한도)
+MAX_DOCS = int(os.environ.get("MAX_DOCS", "1000"))            # 하루에 블로그 문서 수를 새로 셀 최대 키워드 수
+DOCS_REFRESH_DAYS = int(os.environ.get("DOCS_REFRESH_DAYS", "7"))  # 한 번 센 문서 수는 이 기간 동안 다시 세지 않는다
 MIN_MONTHLY = int(os.environ.get("MIN_MONTHLY", "100"))     # 월간 검색수가 이보다 적으면 버림
 HISTORY_DAYS = 35
 KST = datetime.timezone(datetime.timedelta(hours=9))
@@ -185,13 +187,27 @@ def main():
     has_search = bool(os.environ.get("NAVER_CLIENT_ID", "").strip() and os.environ.get("NAVER_CLIENT_SECRET", "").strip())
     if not has_search:
         print("검색 API 키가 없어 블로그 문서 수는 건너뜁니다.")
-    doc_targets = items[:MAX_DOCS] if has_search else []
+    # 문서 수는 하루 사이에 크게 변하지 않으므로, 최근에 센 값은 다시 쓰고
+    # 오래됐거나 처음 보는 키워드만 검색량 많은 순으로 하루 MAX_DOCS 개까지 센다. (외부 호출과 실행 시간을 줄인다)
+    docs_cache = json.loads(DOCS_CACHE.read_text(encoding="utf-8")) if DOCS_CACHE.exists() else {}
+    if not docs_cache and OUT.exists():  # 처음에는 지난 결과 파일의 문서 수로 채운다
+        prev = json.loads(OUT.read_text(encoding="utf-8"))
+        prev_day = prev.get("updated", today)[:10]
+        docs_cache = {r[0]: [r[4], prev_day] for r in prev["rows"] if r[4] is not None}
+    fresh_after = (datetime.date.fromisoformat(today) - datetime.timedelta(days=DOCS_REFRESH_DAYS)).isoformat()
+    for it in items:
+        cached = docs_cache.get(it["k"])
+        if cached:
+            it["docs"] = cached[0]
+    stale = [it for it in items if not (docs_cache.get(it["k"]) and docs_cache[it["k"]][1] > fresh_after)]
+    doc_targets = stale[:MAX_DOCS] if has_search else []
+    print(f"블로그 문서 수: 저장된 값 {len(items) - len(stale)}개 재사용, 오늘 {len(doc_targets)}개 새로 조회")
     for n, it in enumerate(doc_targets, 1):
         try:
             it["docs"] = blog_total(it["k"])
+            docs_cache[it["k"]] = [it["docs"], today]
         except RuntimeError as e:
             print(f"  문서 수 실패 {it['k']}: {e}")
-            it["docs"] = None
             if "HTTP 401" in str(e) or "HTTP 403" in str(e):
                 print("검색 API 키가 올바르지 않아 블로그 문서 수 조회를 멈춥니다. Secrets 를 확인하세요.")
                 break
@@ -227,6 +243,9 @@ def main():
     }
     OUT.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     HISTORY.write_text(json.dumps(history, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    keep_after = (datetime.date.fromisoformat(today) - datetime.timedelta(days=60)).isoformat()
+    docs_cache = {k: v for k, v in docs_cache.items() if v[1] >= keep_after}
+    DOCS_CACHE.write_text(json.dumps(docs_cache, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print(f"저장 완료: {len(rows)}개 -> {OUT.relative_to(ROOT)}")
 
     # 날짜별 기록: 그날 찾은 키워드 전부를 엑셀에서 바로 열리는 CSV로 남긴다.
