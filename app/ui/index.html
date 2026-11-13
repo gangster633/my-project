@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>황금 키워드 찾기</title>
+<style>
+:root {
+  --bg: #f6f7f9; --surface: #fff; --text: #1d2330; --muted: #5b6474; --line: #e2e5ea;
+  --accent: #2563eb; --accent-soft: #e8efff; --gold: #b45309; --gold-soft: #fff7e6; --up: #15803d; --down: #dc2626; --side: #151a23;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #12151b; --surface: #1b1f27; --text: #e7e9ee; --muted: #9aa3b2; --line: #2c323d;
+    --accent: #6b9cff; --accent-soft: #1f2b45; --gold: #fbbf24; --gold-soft: #2a2414; --up: #4ade80; --down: #f87171; --side: #0d1016; }
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.6 -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; display: flex; }
+button, input, select, textarea { font: inherit; color: inherit; }
+input, select, textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+button { padding: 8px 16px; border: 0; border-radius: 8px; background: var(--accent); color: #fff; font-weight: 600; cursor: pointer; white-space: nowrap; }
+button.ghost { background: var(--accent-soft); color: var(--accent); }
+button:disabled { opacity: .5; cursor: default; }
+
+aside { width: 210px; flex: none; background: var(--side); color: #cfd5df; display: flex; flex-direction: column; padding: 18px 12px; }
+.brand { display: flex; gap: 10px; align-items: center; padding: 0 6px 18px; }
+.brand .ico { width: 34px; height: 34px; border-radius: 9px; background: #fbbf24; color: #3b2a00; display: grid; place-items: center; font-weight: 900; }
+.brand b { display: block; color: #fff; font-size: 15px; }
+.brand small { color: #8b95a7; font-size: 12px; }
+.menu button { display: block; width: 100%; text-align: left; background: none; color: #cfd5df; font-weight: 500; padding: 9px 12px; margin-bottom: 2px; }
+.menu button[aria-current] { background: #2a3140; color: #fff; }
+.cats { margin-top: 14px; border-top: 1px solid #262d3a; padding-top: 12px; overflow: auto; flex: 1; }
+.cats div { font-size: 12px; color: #8b95a7; padding: 0 12px 6px; }
+.cats button { display: flex; justify-content: space-between; width: 100%; background: none; color: #aeb6c4; font-weight: 400; padding: 5px 12px; }
+.cats button[aria-current] { color: #fbbf24; }
+.cats button span { color: #6b7587; }
+.quit { background: none; color: #8b95a7; border: 1px solid #2a3140; margin: 10px 6px 0; font-weight: 500; }
+.quit:hover { color: #fff; }
+aside .ver { font-size: 11px; color: #6b7587; padding: 8px 12px 0; }
+
+main { flex: 1; min-width: 0; overflow: auto; padding: 22px 26px 40px; }
+h1 { font-size: 22px; margin: 0 0 4px; }
+.sub { color: var(--muted); margin: 0 0 16px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+.field { display: flex; flex-direction: column; gap: 4px; flex: 1 1 170px; min-width: 0; }
+.field label { font-size: 12px; color: var(--muted); }
+.notice { padding: 12px 14px; border-radius: 10px; background: var(--gold-soft); color: var(--gold); margin-bottom: 14px; }
+.notice:empty { display: none; }
+
+.tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-bottom: 14px; }
+.tabs button { text-align: left; background: var(--surface); color: var(--text); border: 1px solid var(--line); padding: 10px 12px; line-height: 1.35; }
+.tabs button small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; }
+.tabs button[aria-selected="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.count { display: flex; justify-content: space-between; align-items: center; margin: 4px 0 10px; gap: 10px; flex-wrap: wrap; }
+.count b { font-size: 18px; }
+.scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+th { font-size: 12px; color: var(--muted); font-weight: 600; cursor: pointer; user-select: none; position: sticky; top: 0; background: var(--surface); }
+th.on { color: var(--accent); }
+th.nosort { cursor: default; }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+td.kw { white-space: normal; min-width: 170px; }
+td.kw b { cursor: pointer; }
+td.kw b:hover { color: var(--accent); }
+td.kw small { display: block; color: var(--muted); font-size: 12px; }
+th.g, td.g { background: var(--gold-soft); }
+td.g { color: var(--gold); font-weight: 800; }
+.up { color: var(--up); } .down { color: var(--down); } .dim { color: var(--muted); }
+.pager { display: flex; gap: 8px; justify-content: center; align-items: center; margin-top: 12px; }
+.empty { text-align: center; color: var(--muted); padding: 40px 10px !important; }
+.progress { height: 8px; border-radius: 4px; background: var(--accent-soft); overflow: hidden; margin: 10px 0 6px; }
+.progress div { height: 100%; background: var(--accent); width: 0; transition: width .3s; }
+.status { color: var(--muted); }
+.status.err { color: var(--down); }
+.keys .field { flex-basis: 300px; }
+.result-list div { padding: 4px 0; }
+.toast { position: fixed; right: 20px; bottom: 20px; background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 8px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.toast.show { opacity: 1; }
+section[hidden] { display: none; }
+@media (max-width: 760px) { aside { display: none; } main { padding: 16px; } }
+</style>
+</head>
+<body>
+<aside>
+  <div class="brand"><div class="ico">金</div><div><b>황금 키워드 찾기</b><small>네이버 키워드 분석</small></div></div>
+  <nav class="menu" id="menu">
+    <button data-view="list" aria-current="page">키워드 찾기</button>
+    <button data-view="collect">키워드 수집</button>
+    <button data-view="settings">API 설정</button>
+  </nav>
+  <div class="cats" id="cats"></div>
+  <button class="quit" id="quit">프로그램 종료</button>
+  <div class="ver">버전 __VERSION__</div>
+</aside>
+
+<main>
+  <!-- 키워드 찾기 -->
+  <section id="view-list">
+    <h1>키워드 찾기</h1>
+    <p class="sub">검색량은 많고 블로그 문서는 적은 키워드를 찾습니다. 키워드를 누르면 복사됩니다.</p>
+    <div class="notice" id="list-notice"></div>
+    <div class="tabs" id="tabs" role="tablist">
+      <button data-tab="all" aria-selected="true">전체 보기<small>황금지수 높은 순</small></button>
+      <button data-tab="rise1">전일 대비 상승<small>월간 검색수 10%↑</small></button>
+      <button data-tab="rise7">7일 대비 상승<small>월간 검색수 30%↑</small></button>
+      <button data-tab="top">검색량 상위<small>월 3만 회 이상</small></button>
+      <button data-tab="few">문서 적음<small>문서 수 ≤ 월 검색수</small></button>
+    </div>
+    <div class="panel">
+      <div class="row">
+        <div class="field"><label for="q">키워드</label><input id="q" placeholder="상품명·브랜드·키워드"></div>
+        <div class="field"><label for="min">최소 월간 검색수</label><select id="min">
+          <option value="0">제한 없음</option><option value="1000">1,000 이상</option><option value="5000">5,000 이상</option><option value="10000">10,000 이상</option><option value="50000">50,000 이상</option></select></div>
+        <div class="field"><label for="comp">광고 경쟁</label><select id="comp"><option value="">전체</option><option>낮음</option><option>중간</option><option>높음</option></select></div>
+        <button class="ghost" id="export">엑셀(CSV) 저장</button>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="count"><span>키워드 <b id="count">0</b>개</span><span class="dim" id="sel-cat"></span></div>
+      <div class="scroll">
+        <table>
+          <thead><tr id="head">
+            <th class="n nosort">순서</th>
+            <th data-sort="k">키워드</th>
+            <th class="n" data-sort="monthly">월간 검색<br>PC+모바일</th>
+            <th class="n" data-sort="daily">일 평균</th>
+            <th class="n" data-sort="docs">블로그 문서</th>
+            <th class="n" data-sort="ratio">문서/월검색</th>
+            <th class="n" data-sort="chg1">전일 대비</th>
+            <th class="n" data-sort="chg7">7일 대비</th>
+            <th data-sort="comp">광고 경쟁</th>
+            <th class="n g" data-sort="golden">황금지수</th>
+          </tr></thead>
+          <tbody id="body"><tr><td colspan="10" class="empty">불러오는 중…</td></tr></tbody>
+        </table>
+      </div>
+      <div class="pager" id="pager"></div>
+    </div>
+  </section>
+
+  <!-- 키워드 수집 -->
+  <section id="view-collect" hidden>
+    <h1>키워드 수집</h1>
+    <p class="sub">씨앗 키워드를 넣으면 네이버가 연관 키워드를 씨앗 하나당 수백 개까지 돌려줍니다. 같은 키워드를 매일 수집하면 전일·7일 대비 변화가 계산됩니다.</p>
+    <div class="notice" id="collect-notice"></div>
+    <div class="panel">
+      <div class="field"><label for="seeds">씨앗 키워드 (한 줄에 하나, 또는 쉼표로 구분)</label>
+        <textarea id="seeds" rows="7" placeholder="캠핑의자&#10;무선이어폰&#10;선크림"></textarea></div>
+      <div class="row" style="margin-top:10px">
+        <div class="field"><label for="c-cat">분류</label><select id="c-cat"><option value="">자동 분류</option></select></div>
+        <div class="field"><label for="c-min">최소 월간 검색수</label><input id="c-min" type="number" value="100" min="0"></div>
+        <div class="field"><label for="c-max">블로그 문서 수 최대 조회 개수</label><input id="c-max" type="number" value="1000" min="0" max="25000"></div>
+        <div class="field" style="flex:0 0 auto"><label><input type="checkbox" id="c-docs" checked style="width:auto"> 블로그 문서 수 세기</label></div>
+        <button id="start">수집 시작</button>
+      </div>
+      <div class="progress"><div id="bar"></div></div>
+      <div class="status" id="status">대기 중</div>
+    </div>
+    <div class="panel">
+      <b>알아 두세요</b>
+      <ul class="dim" style="margin:6px 0 0; padding-left:18px">
+        <li>블로그 문서 수는 네이버 검색 API 키가 있어야 셉니다. 하루 25,000회까지 무료입니다.</li>
+        <li>문서 수가 없으면 황금지수도 비어 있고, 검색량만 보입니다.</li>
+        <li>수집한 데이터는 이 PC에만 저장됩니다.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 설정 -->
+  <section id="view-settings" hidden>
+    <h1>API 설정</h1>
+    <p class="sub">네이버에서 무료로 받은 내 API 키를 넣습니다. 키는 이 PC에만 저장되고 다른 곳으로 보내지지 않습니다.</p>
+    <div class="panel keys">
+      <b>네이버 검색광고 API (필수)</b>
+      <p class="dim" style="margin:2px 0 10px">searchad.naver.com → 도구 → API 사용 관리</p>
+      <div class="row">
+        <div class="field"><label for="ad_api_key">엑세스라이선스</label><input id="ad_api_key" autocomplete="off"></div>
+        <div class="field"><label for="ad_secret">비밀키</label><input id="ad_secret" autocomplete="off"></div>
+        <div class="field"><label for="ad_customer_id">CUSTOMER_ID</label><input id="ad_customer_id" autocomplete="off"></div>
+      </div>
+    </div>
+    <div class="panel keys">
+      <b>네이버 검색 API (선택 · 블로그 문서 수)</b>
+      <p class="dim" style="margin:2px 0 10px">developers.naver.com → 애플리케이션 등록 → 사용 API "검색"</p>
+      <div class="row">
+        <div class="field"><label for="client_id">Client ID</label><input id="client_id" autocomplete="off"></div>
+        <div class="field"><label for="client_secret">Client Secret</label><input id="client_secret" autocomplete="off"></div>
+      </div>
+    </div>
+    <div class="row" style="margin-bottom:14px">
+      <button id="save">저장</button>
+      <button class="ghost" id="test">연결 테스트</button>
+    </div>
+    <div class="panel result-list" id="test-result" hidden></div>
+    <div class="panel">
+      <b>데이터</b>
+      <p class="dim" style="margin:4px 0 10px">저장 위치: <span id="data-dir"></span></p>
+      <button class="ghost" id="wipe">수집한 키워드 모두 지우기</button>
+    </div>
+  </section>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  var TOKEN = '__TOKEN__', PAGE = 50;
+  var $ = function (id) { return document.getElementById(id); };
+  var fmt = function (n) { return n == null ? '-' : Number(n).toLocaleString('ko-KR'); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  function api(path, body) {
+    return fetch(path, { method: body ? 'POST' : 'GET', headers: { 'X-Token': TOKEN, 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || r.status); return j; }); });
+  }
+  function toast(msg) { var t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(function () { t.classList.remove('show'); }, 1800); }
+
+  // ---------- 화면 전환 ----------
+  function show(view) {
+    ['list', 'collect', 'settings'].forEach(function (v) { $('view-' + v).hidden = v !== view; });
+    Array.prototype.forEach.call($('menu').children, function (b) { if (b.dataset.view === view) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
+    if (view === 'list') load();
+    if (view === 'settings') loadConfig();
+  }
+  $('menu').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) show(b.dataset.view); });
+
+  // ---------- 키워드 목록 ----------
+  var TABS = {
+    all: function () { return true; },
+    rise1: function (r) { return r.chg1 != null && r.chg1 >= 10; },
+    rise7: function (r) { return r.chg7 != null && r.chg7 >= 30; },
+    top: function (r) { return r.monthly >= 30000; },
+    few: function (r) { return r.ratio != null && r.ratio <= 1; }
+  };
+  var DEFAULT_SORT = { all: 'golden', rise1: 'chg1', rise7: 'chg7', top: 'monthly', few: 'golden' };
+  var state = { tab: 'all', sort: 'golden', dir: -1, page: 0, cat: '' }, rows = [], config = null;
+
+  function pct(v) { return v == null ? '<span class="dim">-</span>' : '<span class="' + (v > 0 ? 'up' : v < 0 ? 'down' : '') + '">' + (v > 0 ? '+' : '') + v.toFixed(1) + '%</span>'; }
+
+  function filtered() {
+    var q = $('q').value.trim().replace(/\s+/g, '').toLowerCase(), min = Number($('min').value), comp = $('comp').value, tab = TABS[state.tab];
+    var list = rows.filter(function (r) {
+      return (!q || r.k.toLowerCase().indexOf(q) !== -1) && (!state.cat || r.cat === state.cat) && r.monthly >= min && (!comp || r.comp === comp) && tab(r);
+    });
+    var key = state.sort, dir = state.dir;
+    if (key === 'golden' && !rows.some(function (r) { return r.golden != null; })) key = 'monthly';
+    list.sort(function (a, b) {
+      var x = a[key], y = b[key];
+      if (x == null && y == null) return b.monthly - a.monthly;
+      if (x == null) return 1; if (y == null) return -1;
+      if (typeof x === 'string') return x.localeCompare(y, 'ko') * dir;
+      return (x - y) * dir || b.monthly - a.monthly;
+    });
+    return list;
+  }
+
+  function renderCats() {
+    var counts = {}; rows.forEach(function (r) { counts[r.cat] = (counts[r.cat] || 0) + 1; });
+    var cats = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; });
+    $('cats').innerHTML = '<div>쇼핑 분류</div><button data-cat=""' + (state.cat ? '' : ' aria-current="true"') + '>전체 키워드<span>' + fmt(rows.length) + '</span></button>' +
+      cats.map(function (c) { return '<button data-cat="' + esc(c) + '"' + (state.cat === c ? ' aria-current="true"' : '') + '>' + esc(c) + '<span>' + fmt(counts[c]) + '</span></button>'; }).join('');
+  }
+
+  function render() {
+    var list = filtered(), pages = Math.max(1, Math.ceil(list.length / PAGE));
+    state.page = Math.min(state.page, pages - 1);
+    var start = state.page * PAGE;
+    $('count').textContent = fmt(list.length);
+    $('sel-cat').textContent = state.cat ? '분류: ' + state.cat : '';
+    $('body').innerHTML = list.slice(start, start + PAGE).map(function (r, i) {
+      return '<tr><td class="n dim">' + (start + i + 1) + '</td>' +
+        '<td class="kw"><b data-copy="' + esc(r.k) + '">' + esc(r.k) + '</b><small>' + esc(r.cat) + ' · PC ' + fmt(r.pc) + ' / 모바일 ' + fmt(r.mo) + '</small></td>' +
+        '<td class="n">' + fmt(r.monthly) + '</td><td class="n">' + fmt(r.daily) + '</td><td class="n">' + fmt(r.docs) + '</td>' +
+        '<td class="n">' + (r.ratio == null ? '-' : r.ratio.toFixed(3)) + '</td><td class="n">' + pct(r.chg1) + '</td><td class="n">' + pct(r.chg7) + '</td>' +
+        '<td>' + esc(r.comp || '-') + '</td><td class="n g">' + (r.golden == null ? '-' : r.golden.toFixed(1)) + '</td></tr>';
+    }).join('') || '<tr><td colspan="10" class="empty">' + (rows.length ? '조건에 맞는 키워드가 없습니다.' : '아직 수집한 키워드가 없습니다. 왼쪽 "키워드 수집"에서 시작하세요.') + '</td></tr>';
+    $('pager').innerHTML = pages > 1 ? '<button class="ghost" data-p="-1"' + (state.page ? '' : ' disabled') + '>이전</button><span>' + (state.page + 1) + ' / ' + pages + '</span><button class="ghost" data-p="1"' + (state.page < pages - 1 ? '' : ' disabled') + '>다음</button>' : '';
+    Array.prototype.forEach.call(document.querySelectorAll('#head th[data-sort]'), function (th) {
+      th.classList.toggle('on', th.dataset.sort === state.sort);
+      th.dataset.arrow = th.dataset.sort === state.sort ? (state.dir < 0 ? ' ↓' : ' ↑') : '';
+      if (!th.dataset.label) th.dataset.label = th.innerHTML;
+      th.innerHTML = th.dataset.label + th.dataset.arrow;
+    });
+  }
+
+  function load() {
+    api('/api/keywords').then(function (d) {
+      rows = d.rows; renderCats(); render();
+      var noDocs = rows.length && !rows.some(function (r) { return r.docs != null; });
+      $('list-notice').textContent = noDocs ? '블로그 문서 수가 없어 황금지수가 비어 있습니다. API 설정에서 네이버 검색 API 키를 넣고 다시 수집하면 채워집니다.' : '';
+    }).catch(function (e) { $('body').innerHTML = '<tr><td colspan="10" class="empty">불러오지 못했습니다: ' + esc(e.message) + '</td></tr>'; });
+  }
+
+  $('tabs').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    Array.prototype.forEach.call(this.children, function (x) { x.setAttribute('aria-selected', x === b); });
+    state.tab = b.dataset.tab; state.sort = DEFAULT_SORT[state.tab]; state.dir = -1; state.page = 0; render();
+  });
+  $('head').addEventListener('click', function (e) {
+    var th = e.target.closest('th[data-sort]'); if (!th) return;
+    if (state.sort === th.dataset.sort) state.dir = -state.dir;
+    else { state.sort = th.dataset.sort; state.dir = (state.sort === 'k' || state.sort === 'ratio' || state.sort === 'comp') ? 1 : -1; }
+    state.page = 0; render();
+  });
+  $('pager').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b && !b.disabled) { state.page += Number(b.dataset.p); render(); document.querySelector('main').scrollTop = 0; } });
+  $('cats').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; state.cat = b.dataset.cat; state.page = 0; show('list'); renderCats(); render(); });
+  $('body').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-copy]'); if (!b) return;
+    var text = b.dataset.copy;
+    (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(function () { toast('"' + text + '" 복사됨'); }, function () { toast(text); });
+  });
+  ['q', 'min', 'comp'].forEach(function (id) { $(id).addEventListener('input', function () { state.page = 0; render(); }); });
+  $('export').addEventListener('click', function () { location.href = '/api/export.csv?token=' + encodeURIComponent(TOKEN); });
+
+  // ---------- 수집 ----------
+  var polling = null;
+  function poll() {
+    api('/api/job').then(function (j) {
+      $('bar').style.width = (j.total ? Math.round(j.done / j.total * 100) : (j.running ? 5 : 0)) + '%';
+      $('status').textContent = j.error ? '실패: ' + j.error : j.message;
+      $('status').classList.toggle('err', !!j.error);
+      $('start').disabled = j.running;
+      if (!j.running) {
+        clearInterval(polling); polling = null;
+        if (!j.error && j.added) { $('bar').style.width = '100%'; toast(j.message); }
+      }
+    });
+  }
+  $('start').addEventListener('click', function () {
+    api('/api/collect', { seeds: $('seeds').value, category: $('c-cat').value, docs: $('c-docs').checked, min_monthly: Number($('c-min').value), max_docs: Number($('c-max').value) })
+      .then(function () { $('start').disabled = true; if (!polling) polling = setInterval(poll, 800); poll(); })
+      .catch(function (e) { $('status').textContent = e.message; $('status').classList.add('err'); });
+  });
+
+  // ---------- 설정 ----------
+  var KEYS = ['ad_api_key', 'ad_secret', 'ad_customer_id', 'client_id', 'client_secret'];
+  function loadConfig() {
+    return api('/api/config').then(function (c) {
+      config = c;
+      KEYS.forEach(function (k) { $(k).value = ''; $(k).placeholder = c.masked[k] ? '저장됨 (' + c.masked[k] + ') · 바꾸려면 새로 입력' : '입력하세요'; });
+      $('data-dir').textContent = c.data_dir;
+      if (!$('c-cat').options.length || $('c-cat').options.length === 1) {
+        $('c-cat').insertAdjacentHTML('beforeend', c.categories.map(function (x) { return '<option>' + esc(x) + '</option>'; }).join(''));
+      }
+      var msg = c.has_ad ? (c.has_search ? '' : '네이버 검색 API 키가 없어 블로그 문서 수와 황금지수는 비어 있게 됩니다. (선택 사항)') : '먼저 왼쪽 "API 설정"에서 검색광고 API 키 3개를 넣어 주세요.';
+      $('collect-notice').textContent = msg;
+      return c;
+    });
+  }
+  $('save').addEventListener('click', function () {
+    var body = {}; KEYS.forEach(function (k) { body[k] = $(k).value; });
+    api('/api/config', body).then(function () { toast('저장했습니다'); return loadConfig(); });
+  });
+  $('test').addEventListener('click', function () {
+    var box = $('test-result'); box.hidden = false; box.innerHTML = '테스트 중…';
+    var body = {}; KEYS.forEach(function (k) { body[k] = $(k).value; });
+    api('/api/config', body).then(function () { return api('/api/test', {}); }).then(function (r) {
+      box.innerHTML = '<div><b>검색광고 API</b> · ' + esc(r.ad) + '</div><div><b>검색 API</b> · ' + esc(r.search) + '</div>';
+      loadConfig();
+    }).catch(function (e) { box.textContent = '오류: ' + e.message; });
+  });
+  $('wipe').addEventListener('click', function () {
+    if (!confirm('수집한 키워드와 기록을 모두 지울까요? 되돌릴 수 없습니다.')) return;
+    api('/api/delete', { all: true }).then(function () { toast('모두 지웠습니다'); rows = []; renderCats(); render(); });
+  });
+
+  // 화면이 살아 있다는 신호. 창(탭)을 닫으면 신호가 끊겨 프로그램이 스스로 종료된다.
+  setInterval(function () { api('/api/ping').catch(function () {}); }, 10000);
+  $('quit').addEventListener('click', function () {
+    if (!confirm('프로그램을 종료할까요?')) return;
+    api('/api/quit', {}).finally(function () { document.body.innerHTML = '<main style="padding:40px"><h1>종료되었습니다</h1><p class="sub">이 창은 닫으셔도 됩니다. 다시 쓰려면 프로그램을 다시 실행하세요.</p></main>'; });
+  });
+
+  loadConfig().then(function (c) { if (!c.has_ad) show('settings'); else load(); });
+  api('/api/job').then(function (j) { if (j.running && !polling) polling = setInterval(poll, 800); });
+})();
+</script>
+</body>
+</html>

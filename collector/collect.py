@@ -30,6 +30,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SEEDS = ROOT / "collector" / "seeds.txt"
+CATEGORIES = ROOT / "collector" / "categories.txt"
 OUT = ROOT / "src" / "static" / "data" / "keywords.json"
 HISTORY = ROOT / "data" / "history.json"
 
@@ -93,6 +94,33 @@ def load_seeds():
     return seeds
 
 
+def load_category_words():
+    words, category = {}, None
+    for line in CATEGORIES.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line.startswith("##"):
+            category = line.lstrip("#").strip()
+        elif line and not line.startswith("#") and category:
+            for w in line.split(","):
+                w = w.strip().replace(" ", "").upper()
+                if w:
+                    words[w] = category
+    return words
+
+
+def categorize(keyword, fallback, words):
+    """키워드 안의 사전 단어 중 가장 뒤에서 끝나는 것(같으면 더 긴 것)의 분류. 없으면 fallback."""
+    kw = keyword.replace(" ", "").upper()
+    best = None  # (끝 위치, 길이, 분류)
+    for w, cat in words.items():
+        i = kw.rfind(w)
+        if i != -1:
+            cand = (i + len(w), len(w), cat)
+            if best is None or cand[:2] > best[:2]:
+                best = cand
+    return best[2] if best else fallback
+
+
 def collect_volumes(seeds):
     found = {}
     groups = {}
@@ -141,6 +169,9 @@ def change(series, days_back):
 def main():
     today = datetime.datetime.now(KST).date().isoformat()
     found = collect_volumes(load_seeds())
+    words = load_category_words()
+    for it in found.values():
+        it["cat"] = categorize(it["k"], it["cat"], words)
     items = sorted(found.values(), key=lambda x: x["pc"] + x["mo"], reverse=True)[:MAX_KEYWORDS]
     print(f"연관 키워드 {len(found)}개 중 {len(items)}개 문서 수 조회")
 
@@ -190,5 +221,18 @@ def main():
     print(f"저장 완료: {len(rows)}개 -> {OUT.relative_to(ROOT)}")
 
 
+def recategorize():
+    """API 호출 없이 저장된 keywords.json 의 분류만 사전으로 다시 매긴다."""
+    data = json.loads(OUT.read_text(encoding="utf-8"))
+    words = load_category_words()
+    changed = 0
+    for r in data["rows"]:
+        new = categorize(r[0], r[1], words)
+        changed += new != r[1]
+        r[1] = new
+    OUT.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    print(f"분류 변경 {changed}개 / 전체 {len(data['rows'])}개")
+
+
 if __name__ == "__main__":
-    main()
+    recategorize() if "--recategorize" in sys.argv else main()
