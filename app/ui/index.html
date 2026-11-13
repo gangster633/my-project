@@ -6,90 +6,124 @@
 <title>황금 키워드 찾기</title>
 <style>
 :root {
-  --bg: #f6f7f9; --surface: #fff; --text: #1d2330; --muted: #5b6474; --line: #e2e5ea;
-  --accent: #2563eb; --accent-soft: #e8efff; --gold: #b45309; --gold-soft: #fff7e6; --up: #15803d; --down: #dc2626; --side: #151a23;
+  --bg: #f4f5f7; --surface: #fff; --text: #1b2130; --muted: #5d6676; --line: #e3e6eb;
+  --accent: #2563eb; --accent-soft: #e9f0ff; --gold: #a15c07; --gold-soft: #fff6e2;
+  --up: #15803d; --down: #dc2626; --side: #141922; --side-text: #c9d0db; --side-dim: #7b8597; --chip: #fbbf24;
 }
 @media (prefers-color-scheme: dark) {
-  :root { --bg: #12151b; --surface: #1b1f27; --text: #e7e9ee; --muted: #9aa3b2; --line: #2c323d;
-    --accent: #6b9cff; --accent-soft: #1f2b45; --gold: #fbbf24; --gold-soft: #2a2414; --up: #4ade80; --down: #f87171; --side: #0d1016; }
+  :root { --bg: #101318; --surface: #191d25; --text: #e6e9ee; --muted: #98a1b0; --line: #2a303b;
+    --accent: #6b9cff; --accent-soft: #1d2840; --gold: #fbbf24; --gold-soft: #2a2312; --up: #4ade80; --down: #f87171; --side: #0b0e13; }
 }
 * { box-sizing: border-box; }
 html, body { height: 100%; }
-body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.6 -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; display: flex; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.55 -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; display: flex; }
 button, input, select, textarea { font: inherit; color: inherit; }
-input, select, textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+input, select, textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
 input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 button { padding: 8px 16px; border: 0; border-radius: 8px; background: var(--accent); color: #fff; font-weight: 600; cursor: pointer; white-space: nowrap; }
 button.ghost { background: var(--accent-soft); color: var(--accent); }
+button.dark { background: var(--text); color: var(--surface); }
+button.link { background: none; color: var(--accent); padding: 8px 6px; font-weight: 500; }
 button:disabled { opacity: .5; cursor: default; }
+.dim { color: var(--muted); }
 
-aside { width: 210px; flex: none; background: var(--side); color: #cfd5df; display: flex; flex-direction: column; padding: 18px 12px; }
-.brand { display: flex; gap: 10px; align-items: center; padding: 0 6px 18px; }
-.brand .ico { width: 34px; height: 34px; border-radius: 9px; background: #fbbf24; color: #3b2a00; display: grid; place-items: center; font-weight: 900; }
+/* 사이드바 */
+aside { width: 220px; flex: none; background: var(--side); color: var(--side-text); display: flex; flex-direction: column; padding: 16px 12px; }
+.brand { display: flex; gap: 10px; align-items: center; padding: 0 6px 16px; }
+.brand .ico { width: 34px; height: 34px; border-radius: 9px; background: var(--chip); color: #3b2a00; display: grid; place-items: center; font-weight: 900; }
 .brand b { display: block; color: #fff; font-size: 15px; }
-.brand small { color: #8b95a7; font-size: 12px; }
-.menu button { display: block; width: 100%; text-align: left; background: none; color: #cfd5df; font-weight: 500; padding: 9px 12px; margin-bottom: 2px; }
-.menu button[aria-current] { background: #2a3140; color: #fff; }
-.cats { margin-top: 14px; border-top: 1px solid #262d3a; padding-top: 12px; overflow: auto; flex: 1; }
-.cats div { font-size: 12px; color: #8b95a7; padding: 0 12px 6px; }
-.cats button { display: flex; justify-content: space-between; width: 100%; background: none; color: #aeb6c4; font-weight: 400; padding: 5px 12px; }
-.cats button[aria-current] { color: #fbbf24; }
-.cats button span { color: #6b7587; }
-.quit { background: none; color: #8b95a7; border: 1px solid #2a3140; margin: 10px 6px 0; font-weight: 500; }
+.brand small { color: var(--side-dim); font-size: 12px; }
+.menu { display: flex; gap: 4px; padding: 0 2px 12px; border-bottom: 1px solid #252c38; }
+.menu button { flex: 1; background: none; color: var(--side-text); font-weight: 500; padding: 7px 4px; font-size: 13px; }
+.menu button[aria-current] { background: #283041; color: #fff; }
+.cats { overflow: auto; flex: 1; padding-top: 12px; }
+.cats .h { font-size: 12px; color: var(--side-dim); padding: 0 8px 8px; }
+.cats button { display: flex; align-items: center; gap: 8px; width: 100%; background: none; color: var(--side-text); font-weight: 400; padding: 7px 8px; border-radius: 8px; text-align: left; }
+.cats button .no { color: var(--side-dim); font-size: 12px; width: 18px; font-variant-numeric: tabular-nums; }
+.cats button .nm { flex: 1; }
+.cats button .ct { color: var(--side-dim); font-size: 12px; font-variant-numeric: tabular-nums; }
+.cats button.all { background: #232a37; margin-bottom: 6px; font-weight: 700; }
+.cats button[aria-current] { background: var(--chip); color: #2b1f00; }
+.cats button[aria-current] .ct, .cats button[aria-current] .no { color: #4a3600; }
+.quit { background: none; color: var(--side-dim); border: 1px solid #283041; margin: 10px 4px 0; font-weight: 500; }
 .quit:hover { color: #fff; }
-aside .ver { font-size: 11px; color: #6b7587; padding: 8px 12px 0; }
+.ver { font-size: 11px; color: var(--side-dim); padding: 8px 8px 0; }
 
-main { flex: 1; min-width: 0; overflow: auto; padding: 22px 26px 40px; }
-h1 { font-size: 22px; margin: 0 0 4px; }
-.sub { color: var(--muted); margin: 0 0 16px; }
+/* 본문 */
+main { flex: 1; min-width: 0; overflow: auto; padding: 18px 26px 40px; }
+.crumb { font-size: 12px; color: var(--muted); }
+.title-row { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; margin: 2px 0 14px; }
+h1 { font-size: 24px; margin: 0; }
+.live { font-size: 12px; color: var(--muted); }
+.live::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #22c55e; margin-right: 6px; vertical-align: 1px; }
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
-.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
-.field { display: flex; flex-direction: column; gap: 4px; flex: 1 1 170px; min-width: 0; }
-.field label { font-size: 12px; color: var(--muted); }
-.notice { padding: 12px 14px; border-radius: 10px; background: var(--gold-soft); color: var(--gold); margin-bottom: 14px; }
+.summary { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; justify-content: space-between; padding: 14px 18px; }
+.summary .n { font-size: 24px; font-weight: 800; margin: 0 4px 0 6px; }
+.notice { padding: 11px 14px; border-radius: 10px; background: var(--gold-soft); color: var(--gold); margin-bottom: 14px; }
 .notice:empty { display: none; }
 
-.tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-bottom: 14px; }
-.tabs button { text-align: left; background: var(--surface); color: var(--text); border: 1px solid var(--line); padding: 10px 12px; line-height: 1.35; }
-.tabs button small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; }
-.tabs button[aria-selected="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
-.count { display: flex; justify-content: space-between; align-items: center; margin: 4px 0 10px; gap: 10px; flex-wrap: wrap; }
-.count b { font-size: 18px; }
+.cards { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
+.cards button { text-align: left; background: var(--surface); color: var(--text); border: 1px solid var(--line); padding: 12px; line-height: 1.35; border-radius: 10px; white-space: normal; }
+.cards button small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; margin-top: 4px; }
+.cards button[aria-selected="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+@media (max-width: 1150px) { .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+.field { display: flex; flex-direction: column; gap: 4px; flex: 1 1 170px; min-width: 0; }
+.field label { font-size: 12px; color: var(--muted); font-weight: 600; }
+.filter-foot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; border-top: 1px solid var(--line); margin-top: 14px; padding-top: 12px; }
+.check { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.check input { width: 16px; height: 16px; }
+.detail { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line); }
+.detail.open { display: flex; }
+
+.tbl-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.tbl-head b { font-size: 16px; }
+.tbl-head select { width: auto; }
 .scroll { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; }
-th, td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
-th { font-size: 12px; color: var(--muted); font-weight: 600; cursor: pointer; user-select: none; position: sticky; top: 0; background: var(--surface); }
-th.on { color: var(--accent); }
-th.nosort { cursor: default; }
-td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
-td.kw { white-space: normal; min-width: 170px; }
-td.kw b { cursor: pointer; }
+th, td { padding: 12px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+th { font-size: 12px; color: var(--muted); font-weight: 600; white-space: nowrap; background: var(--surface); }
+th small { display: block; font-weight: 400; }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.c, th.c { text-align: center; }
+td.kw { min-width: 200px; }
+td.kw b { font-size: 15px; cursor: pointer; }
 td.kw b:hover { color: var(--accent); }
-td.kw small { display: block; color: var(--muted); font-size: 12px; }
+td.kw .meta { font-size: 12px; color: var(--muted); margin-top: 3px; }
+td .big { font-size: 16px; font-weight: 700; }
+td .sub { font-size: 11px; color: var(--muted); }
+td .sub.wait { color: var(--gold); }
 th.g, td.g { background: var(--gold-soft); }
-td.g { color: var(--gold); font-weight: 800; }
-.up { color: var(--up); } .down { color: var(--down); } .dim { color: var(--muted); }
-.pager { display: flex; gap: 8px; justify-content: center; align-items: center; margin-top: 12px; }
-.empty { text-align: center; color: var(--muted); padding: 40px 10px !important; }
-.progress { height: 8px; border-radius: 4px; background: var(--accent-soft); overflow: hidden; margin: 10px 0 6px; }
+td.g { color: var(--gold); font-weight: 800; font-size: 15px; }
+.up { color: var(--up); font-weight: 700; } .down { color: var(--down); font-weight: 700; }
+.spark { display: block; }
+.spark-label { font-size: 11px; color: var(--muted); display: flex; justify-content: space-between; width: 150px; }
+.spark-label b { color: var(--text); font-weight: 700; }
+.badge { display: inline-block; font-size: 12px; border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; color: var(--muted); }
+.pager { display: flex; gap: 4px; justify-content: center; align-items: center; margin-top: 14px; flex-wrap: wrap; }
+.pager button { min-width: 34px; padding: 6px 10px; background: var(--surface); color: var(--text); border: 1px solid var(--line); font-weight: 500; }
+.pager button[aria-current] { background: var(--accent); color: #fff; border-color: var(--accent); }
+.empty { text-align: center; color: var(--muted); padding: 50px 10px !important; }
+
+.progress { height: 8px; border-radius: 4px; background: var(--accent-soft); overflow: hidden; margin: 12px 0 6px; }
 .progress div { height: 100%; background: var(--accent); width: 0; transition: width .3s; }
-.status { color: var(--muted); }
 .status.err { color: var(--down); }
 .keys .field { flex-basis: 300px; }
 .result-list div { padding: 4px 0; }
 .toast { position: fixed; right: 20px; bottom: 20px; background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 8px; opacity: 0; transition: opacity .2s; pointer-events: none; }
 .toast.show { opacity: 1; }
 section[hidden] { display: none; }
-@media (max-width: 760px) { aside { display: none; } main { padding: 16px; } }
+@media (max-width: 760px) { aside { display: none; } main { padding: 14px; } .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 </style>
 </head>
 <body>
 <aside>
-  <div class="brand"><div class="ico">金</div><div><b>황금 키워드 찾기</b><small>네이버 키워드 분석</small></div></div>
+  <div class="brand"><div class="ico">金</div><div><b>황금 키워드 찾기</b><small>네이버 상품 키워드 분석</small></div></div>
   <nav class="menu" id="menu">
-    <button data-view="list" aria-current="page">키워드 찾기</button>
-    <button data-view="collect">키워드 수집</button>
-    <button data-view="settings">API 설정</button>
+    <button data-view="list" aria-current="page">키워드</button>
+    <button data-view="collect">수집</button>
+    <button data-view="settings">설정</button>
   </nav>
   <div class="cats" id="cats"></div>
   <button class="quit" id="quit">프로그램 종료</button>
@@ -99,42 +133,78 @@ section[hidden] { display: none; }
 <main>
   <!-- 키워드 찾기 -->
   <section id="view-list">
-    <h1>키워드 찾기</h1>
-    <p class="sub">검색량은 많고 블로그 문서는 적은 키워드를 찾습니다. 키워드를 누르면 복사됩니다.</p>
-    <div class="notice" id="list-notice"></div>
-    <div class="tabs" id="tabs" role="tablist">
-      <button data-tab="all" aria-selected="true">전체 보기<small>황금지수 높은 순</small></button>
-      <button data-tab="rise1">전일 대비 상승<small>월간 검색수 10%↑</small></button>
-      <button data-tab="rise7">7일 대비 상승<small>월간 검색수 30%↑</small></button>
-      <button data-tab="top">검색량 상위<small>월 3만 회 이상</small></button>
-      <button data-tab="few">문서 적음<small>문서 수 ≤ 월 검색수</small></button>
+    <div class="crumb">키워드 찾기 / 쇼핑 키워드</div>
+    <div class="title-row"><h1>키워드 찾기</h1><span class="live" id="updated">-</span></div>
+
+    <div class="panel summary">
+      <div><span class="dim">현재 조건</span><span class="n" id="count">0</span>개 <span class="dim">· 검색량 · 트렌드 · 블로그 문서 수로 찾는 키워드</span></div>
+      <div class="dim" style="font-size:12px">일 검색량 기준일은 키워드별로 표시</div>
     </div>
+    <div class="notice" id="list-notice"></div>
+
+    <div class="cards" id="tabs" role="tablist">
+      <button data-tab="all" aria-selected="true">전체 보기<small>황금지수 높은 순</small></button>
+      <button data-tab="surge">하루 급등<small>일 검색 101회 이상 · 전일 대비 50%↑</small></button>
+      <button data-tab="rise3">3일 평균 상승<small>직전 3일보다 30% 이상</small></button>
+      <button data-tab="rise7">7일 평균 상승<small>직전 7일보다 30% 이상</small></button>
+      <button data-tab="top">검색량 상위<small>일 검색 1,000회 이상</small></button>
+      <button data-tab="few">검색 대비 문서 적음<small>문서 수 ≤ 월 검색 수</small></button>
+    </div>
+
     <div class="panel">
       <div class="row">
-        <div class="field"><label for="q">키워드</label><input id="q" placeholder="상품명·브랜드·키워드"></div>
-        <div class="field"><label for="min">최소 월간 검색수</label><select id="min">
-          <option value="0">제한 없음</option><option value="1000">1,000 이상</option><option value="5000">5,000 이상</option><option value="10000">10,000 이상</option><option value="50000">50,000 이상</option></select></div>
-        <div class="field"><label for="comp">광고 경쟁</label><select id="comp"><option value="">전체</option><option>낮음</option><option>중간</option><option>높음</option></select></div>
-        <button class="ghost" id="export">엑셀(CSV) 저장</button>
+        <div class="field" style="flex-basis:260px"><label for="q">키워드</label><input id="q" placeholder="상품명·브랜드·키워드"></div>
+        <div class="field" style="flex:0 1 220px"><label for="cat">쇼핑 분류</label><select id="cat"><option value="">1차 분류 전체</option></select></div>
+      </div>
+      <div class="row detail" id="detail">
+        <div class="field"><label for="f-dmin">일 검색량 최소</label><input id="f-dmin" type="number" min="0" placeholder="예: 100"></div>
+        <div class="field"><label for="f-dmax">일 검색량 최대</label><input id="f-dmax" type="number" min="0" placeholder="제한 없음"></div>
+        <div class="field"><label for="f-docmax">블로그 문서 최대</label><input id="f-docmax" type="number" min="0" placeholder="제한 없음"></div>
+        <div class="field"><label for="f-gmin">황금지수 최소</label><input id="f-gmin" type="number" min="0" max="100" placeholder="예: 70"></div>
+        <div class="field"><label for="f-comp">광고 경쟁</label><select id="f-comp"><option value="">전체</option><option>낮음</option><option>중간</option><option>높음</option></select></div>
+      </div>
+      <div class="filter-foot">
+        <label class="check"><input type="checkbox" id="f-latest"> <b>최신 자료 기준만</b> <span class="dim" style="font-size:12px">마지막 수집에서 갱신된 키워드만 비교</span></label>
+        <div>
+          <button class="link" id="toggle-detail">상세 필터</button>
+          <button class="link" id="reset">초기화</button>
+          <button class="dark" id="apply">조건 적용</button>
+        </div>
       </div>
     </div>
+
     <div class="panel">
-      <div class="count"><span>키워드 <b id="count">0</b>개</span><span class="dim" id="sel-cat"></span></div>
+      <div class="tbl-head">
+        <div><b>키워드</b> <span class="dim" id="count2">0</span></div>
+        <div class="row" style="gap:8px; align-items:center">
+          <button class="ghost" id="export">엑셀(CSV) 저장</button>
+          <span class="dim">정렬</span>
+          <select id="sort">
+            <option value="golden:-1">황금지수 높은 순</option>
+            <option value="daily:-1">일 검색량 많은 순</option>
+            <option value="d1:-1">전일 대비 증가율 순</option>
+            <option value="a3:-1">3일 평균 증가율 순</option>
+            <option value="a7:-1">7일 평균 증가율 순</option>
+            <option value="monthly:-1">월간 검색량 많은 순</option>
+            <option value="docs:1">블로그 문서 적은 순</option>
+            <option value="ratio:1">문서/월검색 낮은 순</option>
+          </select>
+        </div>
+      </div>
       <div class="scroll">
         <table>
-          <thead><tr id="head">
-            <th class="n nosort">순서</th>
-            <th data-sort="k">키워드</th>
-            <th class="n" data-sort="monthly">월간 검색<br>PC+모바일</th>
-            <th class="n" data-sort="daily">일 평균</th>
-            <th class="n" data-sort="docs">블로그 문서</th>
-            <th class="n" data-sort="ratio">문서/월검색</th>
-            <th class="n" data-sort="chg1">전일 대비</th>
-            <th class="n" data-sort="chg7">7일 대비</th>
-            <th data-sort="comp">광고 경쟁</th>
-            <th class="n g" data-sort="golden">황금지수</th>
+          <thead><tr>
+            <th class="c">순서</th>
+            <th>키워드</th>
+            <th class="n">일 검색량<small>PC + 모바일</small></th>
+            <th class="n">3일 평균 증가율</th>
+            <th>최근 30일</th>
+            <th class="n">블로그 문서 수</th>
+            <th class="n">문서 / 월 검색</th>
+            <th class="n g">황금지수</th>
+            <th class="c">광고 경쟁</th>
           </tr></thead>
-          <tbody id="body"><tr><td colspan="10" class="empty">불러오는 중…</td></tr></tbody>
+          <tbody id="body"><tr><td colspan="9" class="empty">불러오는 중…</td></tr></tbody>
         </table>
       </div>
       <div class="pager" id="pager"></div>
@@ -143,8 +213,9 @@ section[hidden] { display: none; }
 
   <!-- 키워드 수집 -->
   <section id="view-collect" hidden>
-    <h1>키워드 수집</h1>
-    <p class="sub">씨앗 키워드를 넣으면 네이버가 연관 키워드를 씨앗 하나당 수백 개까지 돌려줍니다. 같은 키워드를 매일 수집하면 전일·7일 대비 변화가 계산됩니다.</p>
+    <div class="crumb">키워드 수집</div>
+    <div class="title-row"><h1>키워드 수집</h1></div>
+    <p class="dim" style="margin-top:0">씨앗 키워드를 넣으면 네이버가 씨앗 하나당 연관 키워드를 수백 개까지 돌려줍니다. 매일 수집하면 트렌드가 최신으로 유지됩니다.</p>
     <div class="notice" id="collect-notice"></div>
     <div class="panel">
       <div class="field"><label for="seeds">씨앗 키워드 (한 줄에 하나, 또는 쉼표로 구분)</label>
@@ -152,18 +223,24 @@ section[hidden] { display: none; }
       <div class="row" style="margin-top:10px">
         <div class="field"><label for="c-cat">분류</label><select id="c-cat"><option value="">자동 분류</option></select></div>
         <div class="field"><label for="c-min">최소 월간 검색수</label><input id="c-min" type="number" value="100" min="0"></div>
-        <div class="field"><label for="c-max">블로그 문서 수 최대 조회 개수</label><input id="c-max" type="number" value="1000" min="0" max="25000"></div>
-        <div class="field" style="flex:0 0 auto"><label><input type="checkbox" id="c-docs" checked style="width:auto"> 블로그 문서 수 세기</label></div>
+        <div class="field"><label for="c-max">블로그 문서 수 최대 조회</label><input id="c-max" type="number" value="1000" min="0" max="25000"></div>
+        <div class="field"><label for="c-tmax">트렌드 최대 조회 (키워드 수)</label><input id="c-tmax" type="number" value="1000" min="0" max="20000"></div>
+      </div>
+      <div class="row" style="margin-top:10px; justify-content:space-between">
+        <div class="row" style="gap:16px">
+          <label class="check"><input type="checkbox" id="c-docs" checked> 블로그 문서 수 세기</label>
+          <label class="check"><input type="checkbox" id="c-trend" checked> 최근 30일 트렌드 받기</label>
+        </div>
         <button id="start">수집 시작</button>
       </div>
       <div class="progress"><div id="bar"></div></div>
-      <div class="status" id="status">대기 중</div>
+      <div class="status dim" id="status">대기 중</div>
     </div>
     <div class="panel">
       <b>알아 두세요</b>
       <ul class="dim" style="margin:6px 0 0; padding-left:18px">
-        <li>블로그 문서 수는 네이버 검색 API 키가 있어야 셉니다. 하루 25,000회까지 무료입니다.</li>
-        <li>문서 수가 없으면 황금지수도 비어 있고, 검색량만 보입니다.</li>
+        <li>블로그 문서 수와 30일 트렌드는 NAVER API HUB 키가 있어야 받습니다. 앱에 <b>블로그 검색</b>과 <b>데이터랩(검색어 트렌드)</b>을 모두 추가하세요.</li>
+        <li>일 검색량은 월간 검색수를 데이터랩 일별 비율로 나눈 추정값입니다. 트렌드가 없으면 월간 검색수 ÷ 30으로 표시합니다.</li>
         <li>수집한 데이터는 이 PC에만 저장됩니다.</li>
       </ul>
     </div>
@@ -171,10 +248,11 @@ section[hidden] { display: none; }
 
   <!-- 설정 -->
   <section id="view-settings" hidden>
-    <h1>API 설정</h1>
-    <p class="sub">네이버에서 무료로 받은 내 API 키를 넣습니다. 키는 이 PC에만 저장되고 다른 곳으로 보내지지 않습니다.</p>
+    <div class="crumb">설정</div>
+    <div class="title-row"><h1>API 설정</h1></div>
+    <p class="dim" style="margin-top:0">네이버에서 무료로 받은 내 API 키를 넣습니다. 키는 이 PC에만 저장되고 다른 곳으로 보내지지 않습니다.</p>
     <div class="panel keys">
-      <b>네이버 검색광고 API (필수)</b>
+      <b>네이버 검색광고 API (필수 · 검색량)</b>
       <p class="dim" style="margin:2px 0 10px">searchad.naver.com → 도구 → API 사용 관리</p>
       <div class="row">
         <div class="field"><label for="ad_api_key">엑세스라이선스</label><input id="ad_api_key" autocomplete="off"></div>
@@ -183,8 +261,8 @@ section[hidden] { display: none; }
       </div>
     </div>
     <div class="panel keys">
-      <b>NAVER API HUB 블로그 검색 (선택 · 블로그 문서 수)</b>
-      <p class="dim" style="margin:2px 0 10px">ncloud.com 콘솔 → NAVER API HUB → Application 등록(블로그 검색 선택) → 인증 정보</p>
+      <b>NAVER API HUB (선택 · 블로그 문서 수 + 30일 트렌드)</b>
+      <p class="dim" style="margin:2px 0 10px">ncloud.com 콘솔 → NAVER API HUB → Application 등록(블로그 검색, 데이터랩 검색어 트렌드 선택) → 인증 정보</p>
       <div class="row">
         <div class="field"><label for="client_id">Client ID</label><input id="client_id" autocomplete="off"></div>
         <div class="field"><label for="client_secret">Client Secret</label><input id="client_secret" autocomplete="off"></div>
@@ -215,6 +293,7 @@ section[hidden] { display: none; }
       .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || r.status); return j; }); });
   }
   function toast(msg) { var t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(function () { t.classList.remove('show'); }, 1800); }
+  function md(day) { if (!day) return ''; var p = day.split('-'); return Number(p[1]) + '월 ' + Number(p[2]) + '일'; }
 
   // ---------- 화면 전환 ----------
   function show(view) {
@@ -228,28 +307,49 @@ section[hidden] { display: none; }
   // ---------- 키워드 목록 ----------
   var TABS = {
     all: function () { return true; },
-    rise1: function (r) { return r.chg1 != null && r.chg1 >= 10; },
-    rise7: function (r) { return r.chg7 != null && r.chg7 >= 30; },
-    top: function (r) { return r.monthly >= 30000; },
-    few: function (r) { return r.ratio != null && r.ratio <= 1; }
+    surge: function (r) { return r.spark && r.daily >= 101 && r.d1 != null && r.d1 >= 50; },
+    rise3: function (r) { return r.a3 != null && r.a3 >= 30; },
+    rise7: function (r) { return r.a7 != null && r.a7 >= 30; },
+    top: function (r) { return r.daily >= 1000; },
+    few: function (r) { return r.docs != null && r.docs <= r.monthly; }
   };
-  var DEFAULT_SORT = { all: 'golden', rise1: 'chg1', rise7: 'chg7', top: 'monthly', few: 'golden' };
-  var state = { tab: 'all', sort: 'golden', dir: -1, page: 0, cat: '' }, rows = [], config = null;
+  var TAB_SORT = { all: 'golden:-1', surge: 'd1:-1', rise3: 'a3:-1', rise7: 'a7:-1', top: 'daily:-1', few: 'ratio:1' };
+  var state = { tab: 'all', page: 0, cat: '', f: {} }, rows = [];
 
   function pct(v) { return v == null ? '<span class="dim">-</span>' : '<span class="' + (v > 0 ? 'up' : v < 0 ? 'down' : '') + '">' + (v > 0 ? '+' : '') + v.toFixed(1) + '%</span>'; }
 
+  function spark(r) {
+    if (!r.spark) return '<span class="dim" style="font-size:12px">트렌드 없음</span>';
+    var v = r.spark, w = 150, h = 34, max = Math.max.apply(null, v) || 1, n = v.length;
+    var pts = v.map(function (x, i) { return (i * (w - 4) / (n - 1) + 2).toFixed(1) + ',' + (h - 3 - x / max * (h - 8)).toFixed(1); });
+    var peak = v.indexOf(Math.max.apply(null, v));
+    var start = new Date(r.spark_start + 'T00:00:00'); start.setDate(start.getDate() + peak);
+    var last = pts[n - 1].split(',');
+    return '<div class="spark-label"><span>' + (start.getMonth() + 1) + '월 ' + start.getDate() + '일</span><b>' + fmt(v[peak]) + '회</b></div>' +
+      '<svg class="spark" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '"><polyline fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linejoin="round" points="' + pts.join(' ') + '"/>' +
+      '<circle cx="' + last[0] + '" cy="' + last[1] + '" r="2.6" fill="var(--accent)"/></svg>';
+  }
+
+  function readFilters() {
+    var num = function (id) { var v = $(id).value; return v === '' ? null : Number(v); };
+    state.f = { q: $('q').value.trim().replace(/\s+/g, '').toLowerCase(), dmin: num('f-dmin'), dmax: num('f-dmax'), docmax: num('f-docmax'), gmin: num('f-gmin'), comp: $('f-comp').value, latest: $('f-latest').checked };
+    state.cat = $('cat').value;
+  }
+
   function filtered() {
-    var q = $('q').value.trim().replace(/\s+/g, '').toLowerCase(), min = Number($('min').value), comp = $('comp').value, tab = TABS[state.tab];
+    var f = state.f, tab = TABS[state.tab];
     var list = rows.filter(function (r) {
-      return (!q || r.k.toLowerCase().indexOf(q) !== -1) && (!state.cat || r.cat === state.cat) && r.monthly >= min && (!comp || r.comp === comp) && tab(r);
+      return (!f.q || r.k.toLowerCase().indexOf(f.q) !== -1) && (!state.cat || r.cat === state.cat) &&
+        (f.dmin == null || r.daily >= f.dmin) && (f.dmax == null || r.daily <= f.dmax) &&
+        (f.docmax == null || (r.docs != null && r.docs <= f.docmax)) && (f.gmin == null || (r.golden != null && r.golden >= f.gmin)) &&
+        (!f.comp || r.comp === f.comp) && (!f.latest || r.latest) && tab(r);
     });
-    var key = state.sort, dir = state.dir;
+    var s = $('sort').value.split(':'), key = s[0], dir = Number(s[1]);
     if (key === 'golden' && !rows.some(function (r) { return r.golden != null; })) key = 'monthly';
     list.sort(function (a, b) {
       var x = a[key], y = b[key];
       if (x == null && y == null) return b.monthly - a.monthly;
       if (x == null) return 1; if (y == null) return -1;
-      if (typeof x === 'string') return x.localeCompare(y, 'ko') * dir;
       return (x - y) * dir || b.monthly - a.monthly;
     });
     return list;
@@ -257,9 +357,13 @@ section[hidden] { display: none; }
 
   function renderCats() {
     var counts = {}; rows.forEach(function (r) { counts[r.cat] = (counts[r.cat] || 0) + 1; });
-    var cats = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; });
-    $('cats').innerHTML = '<div>쇼핑 분류</div><button data-cat=""' + (state.cat ? '' : ' aria-current="true"') + '>전체 키워드<span>' + fmt(rows.length) + '</span></button>' +
-      cats.map(function (c) { return '<button data-cat="' + esc(c) + '"' + (state.cat === c ? ' aria-current="true"' : '') + '>' + esc(c) + '<span>' + fmt(counts[c]) + '</span></button>'; }).join('');
+    var order = (window._cats || []).filter(function (c) { return counts[c]; });
+    Object.keys(counts).forEach(function (c) { if (order.indexOf(c) === -1) order.push(c); });
+    $('cats').innerHTML = '<div class="h">쇼핑 분류</div><button class="all" data-cat=""' + (state.cat ? '' : ' aria-current="true"') + '><span class="nm">전체 키워드</span><span class="ct">' + fmt(rows.length) + '</span></button>' +
+      order.map(function (c, i) { return '<button data-cat="' + esc(c) + '"' + (state.cat === c ? ' aria-current="true"' : '') + '><span class="no">' + String(i + 1).padStart(2, '0') + '</span><span class="nm">' + esc(c) + '</span><span class="ct">' + fmt(counts[c]) + '</span></button>'; }).join('');
+    var sel = $('cat'), cur = sel.value;
+    sel.innerHTML = '<option value="">1차 분류 전체</option>' + order.map(function (c) { return '<option>' + esc(c) + '</option>'; }).join('');
+    sel.value = state.cat || cur || '';
   }
 
   function render() {
@@ -267,50 +371,60 @@ section[hidden] { display: none; }
     state.page = Math.min(state.page, pages - 1);
     var start = state.page * PAGE;
     $('count').textContent = fmt(list.length);
-    $('sel-cat').textContent = state.cat ? '분류: ' + state.cat : '';
+    $('count2').textContent = fmt(list.length);
     $('body').innerHTML = list.slice(start, start + PAGE).map(function (r, i) {
-      return '<tr><td class="n dim">' + (start + i + 1) + '</td>' +
-        '<td class="kw"><b data-copy="' + esc(r.k) + '">' + esc(r.k) + '</b><small>' + esc(r.cat) + ' · PC ' + fmt(r.pc) + ' / 모바일 ' + fmt(r.mo) + '</small></td>' +
-        '<td class="n">' + fmt(r.monthly) + '</td><td class="n">' + fmt(r.daily) + '</td><td class="n">' + fmt(r.docs) + '</td>' +
-        '<td class="n">' + (r.ratio == null ? '-' : r.ratio.toFixed(3)) + '</td><td class="n">' + pct(r.chg1) + '</td><td class="n">' + pct(r.chg7) + '</td>' +
-        '<td>' + esc(r.comp || '-') + '</td><td class="n g">' + (r.golden == null ? '-' : r.golden.toFixed(1)) + '</td></tr>';
-    }).join('') || '<tr><td colspan="10" class="empty">' + (rows.length ? '조건에 맞는 키워드가 없습니다.' : '아직 수집한 키워드가 없습니다. 왼쪽 "키워드 수집"에서 시작하세요.') + '</td></tr>';
-    $('pager').innerHTML = pages > 1 ? '<button class="ghost" data-p="-1"' + (state.page ? '' : ' disabled') + '>이전</button><span>' + (state.page + 1) + ' / ' + pages + '</span><button class="ghost" data-p="1"' + (state.page < pages - 1 ? '' : ' disabled') + '>다음</button>' : '';
-    Array.prototype.forEach.call(document.querySelectorAll('#head th[data-sort]'), function (th) {
-      th.classList.toggle('on', th.dataset.sort === state.sort);
-      th.dataset.arrow = th.dataset.sort === state.sort ? (state.dir < 0 ? ' ↓' : ' ↑') : '';
-      if (!th.dataset.label) th.dataset.label = th.innerHTML;
-      th.innerHTML = th.dataset.label + th.dataset.arrow;
-    });
+      return '<tr><td class="c dim">' + (start + i + 1) + '</td>' +
+        '<td class="kw"><b data-copy="' + esc(r.k) + '" title="누르면 복사">' + esc(r.k) + '</b><div class="meta">' + esc(r.cat) + ' · 월간 합계 ' + fmt(r.monthly) + ' (PC ' + fmt(r.pc) + ' / 모바일 ' + fmt(r.mo) + ')</div></td>' +
+        '<td class="n"><div class="big">' + fmt(r.daily) + '</div>' + (r.daily_day ? '<div class="sub">' + r.daily_day + ' 기준</div>' : '<div class="sub wait">월간÷30 추정</div>') + '</td>' +
+        '<td class="n">' + pct(r.a3) + (r.d1 != null ? '<div class="sub">전일 ' + (r.d1 > 0 ? '+' : '') + r.d1.toFixed(1) + '%</div>' : '') + '</td>' +
+        '<td>' + spark(r) + '</td>' +
+        '<td class="n">' + fmt(r.docs) + '</td>' +
+        '<td class="n">' + (r.ratio == null ? '-' : r.ratio.toFixed(3)) + '</td>' +
+        '<td class="n g">' + (r.golden == null ? '-' : r.golden.toFixed(1)) + '</td>' +
+        '<td class="c"><span class="badge">' + esc(r.comp || '-') + '</span></td></tr>';
+    }).join('') || '<tr><td colspan="9" class="empty">' + (rows.length ? '조건에 맞는 키워드가 없습니다.' : '아직 수집한 키워드가 없습니다. 왼쪽 위 "수집"에서 시작하세요.') + '</td></tr>';
+    var pg = '', from = Math.max(0, state.page - 4), to = Math.min(pages, from + 9);
+    if (pages > 1) {
+      pg += '<button data-p="' + (state.page - 1) + '"' + (state.page ? '' : ' disabled') + '>‹</button>';
+      for (var p = from; p < to; p++) pg += '<button data-p="' + p + '"' + (p === state.page ? ' aria-current="page"' : '') + '>' + (p + 1) + '</button>';
+      pg += '<button data-p="' + (state.page + 1) + '"' + (state.page < pages - 1 ? '' : ' disabled') + '>›</button>';
+    }
+    $('pager').innerHTML = pg;
   }
 
   function load() {
     api('/api/keywords').then(function (d) {
-      rows = d.rows; renderCats(); render();
-      var noDocs = rows.length && !rows.some(function (r) { return r.docs != null; });
-      $('list-notice').textContent = noDocs ? '블로그 문서 수가 없어 황금지수가 비어 있습니다. API 설정에서 네이버 검색 API 키를 넣고 다시 수집하면 채워집니다.' : '';
-    }).catch(function (e) { $('body').innerHTML = '<tr><td colspan="10" class="empty">불러오지 못했습니다: ' + esc(e.message) + '</td></tr>'; });
+      rows = d.rows; renderCats(); readFilters(); render();
+      var last = rows.reduce(function (m, r) { return r.updated && r.updated > m ? r.updated : m; }, '');
+      $('updated').textContent = last ? last + ' 갱신' : '수집 전';
+      var msg = [];
+      if (rows.length && !rows.some(function (r) { return r.spark; })) msg.push('30일 트렌드가 없어 일 검색량은 월간÷30 추정값이고, 급등·평균 상승 탭이 비어 있습니다.');
+      if (rows.length && !rows.some(function (r) { return r.docs != null; })) msg.push('블로그 문서 수가 없어 황금지수가 비어 있습니다.');
+      $('list-notice').textContent = msg.length ? msg.join(' ') + ' 설정에서 NAVER API HUB 키를 넣고 다시 수집하세요.' : '';
+    }).catch(function (e) { $('body').innerHTML = '<tr><td colspan="9" class="empty">불러오지 못했습니다: ' + esc(e.message) + '</td></tr>'; });
   }
 
   $('tabs').addEventListener('click', function (e) {
     var b = e.target.closest('button'); if (!b) return;
     Array.prototype.forEach.call(this.children, function (x) { x.setAttribute('aria-selected', x === b); });
-    state.tab = b.dataset.tab; state.sort = DEFAULT_SORT[state.tab]; state.dir = -1; state.page = 0; render();
+    state.tab = b.dataset.tab; $('sort').value = TAB_SORT[state.tab]; state.page = 0; render();
   });
-  $('head').addEventListener('click', function (e) {
-    var th = e.target.closest('th[data-sort]'); if (!th) return;
-    if (state.sort === th.dataset.sort) state.dir = -state.dir;
-    else { state.sort = th.dataset.sort; state.dir = (state.sort === 'k' || state.sort === 'ratio' || state.sort === 'comp') ? 1 : -1; }
-    state.page = 0; render();
+  $('apply').addEventListener('click', function () { readFilters(); state.page = 0; renderCats(); render(); });
+  $('q').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('apply').click(); });
+  $('toggle-detail').addEventListener('click', function () { $('detail').classList.toggle('open'); });
+  $('reset').addEventListener('click', function () {
+    ['q', 'f-dmin', 'f-dmax', 'f-docmax', 'f-gmin'].forEach(function (id) { $(id).value = ''; });
+    $('f-comp').value = ''; $('f-latest').checked = false; $('cat').value = ''; state.cat = '';
+    readFilters(); state.page = 0; renderCats(); render();
   });
-  $('pager').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b && !b.disabled) { state.page += Number(b.dataset.p); render(); document.querySelector('main').scrollTop = 0; } });
-  $('cats').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; state.cat = b.dataset.cat; state.page = 0; show('list'); renderCats(); render(); });
+  $('sort').addEventListener('change', function () { state.page = 0; render(); });
+  $('pager').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b && !b.disabled) { state.page = Number(b.dataset.p); render(); document.querySelector('main').scrollTop = 0; } });
+  $('cats').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; state.cat = b.dataset.cat; $('cat').value = state.cat; state.page = 0; show('list'); });
   $('body').addEventListener('click', function (e) {
     var b = e.target.closest('[data-copy]'); if (!b) return;
     var text = b.dataset.copy;
     (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(function () { toast('"' + text + '" 복사됨'); }, function () { toast(text); });
   });
-  ['q', 'min', 'comp'].forEach(function (id) { $(id).addEventListener('input', function () { state.page = 0; render(); }); });
   $('export').addEventListener('click', function () { location.href = '/api/export.csv?token=' + encodeURIComponent(TOKEN); });
 
   // ---------- 수집 ----------
@@ -328,7 +442,8 @@ section[hidden] { display: none; }
     });
   }
   $('start').addEventListener('click', function () {
-    api('/api/collect', { seeds: $('seeds').value, category: $('c-cat').value, docs: $('c-docs').checked, min_monthly: Number($('c-min').value), max_docs: Number($('c-max').value) })
+    api('/api/collect', { seeds: $('seeds').value, category: $('c-cat').value, docs: $('c-docs').checked, trend: $('c-trend').checked,
+      min_monthly: Number($('c-min').value), max_docs: Number($('c-max').value), max_trend: Number($('c-tmax').value) })
       .then(function () { $('start').disabled = true; if (!polling) polling = setInterval(poll, 800); poll(); })
       .catch(function (e) { $('status').textContent = e.message; $('status').classList.add('err'); });
   });
@@ -337,14 +452,11 @@ section[hidden] { display: none; }
   var KEYS = ['ad_api_key', 'ad_secret', 'ad_customer_id', 'client_id', 'client_secret'];
   function loadConfig() {
     return api('/api/config').then(function (c) {
-      config = c;
+      window._cats = c.categories;
       KEYS.forEach(function (k) { $(k).value = ''; $(k).placeholder = c.masked[k] ? '저장됨 (' + c.masked[k] + ') · 바꾸려면 새로 입력' : '입력하세요'; });
       $('data-dir').textContent = c.data_dir;
-      if (!$('c-cat').options.length || $('c-cat').options.length === 1) {
-        $('c-cat').insertAdjacentHTML('beforeend', c.categories.map(function (x) { return '<option>' + esc(x) + '</option>'; }).join(''));
-      }
-      var msg = c.has_ad ? (c.has_search ? '' : '네이버 검색 API 키가 없어 블로그 문서 수와 황금지수는 비어 있게 됩니다. (선택 사항)') : '먼저 왼쪽 "API 설정"에서 검색광고 API 키 3개를 넣어 주세요.';
-      $('collect-notice').textContent = msg;
+      if ($('c-cat').options.length <= 1) $('c-cat').insertAdjacentHTML('beforeend', c.categories.map(function (x) { return '<option>' + esc(x) + '</option>'; }).join(''));
+      $('collect-notice').textContent = c.has_ad ? (c.has_search ? '' : 'NAVER API HUB 키가 없어 블로그 문서 수·30일 트렌드는 받지 않습니다. (선택 사항)') : '먼저 "설정"에서 검색광고 API 키 3개를 넣어 주세요.';
       return c;
     });
   }
@@ -356,7 +468,7 @@ section[hidden] { display: none; }
     var box = $('test-result'); box.hidden = false; box.innerHTML = '테스트 중…';
     var body = {}; KEYS.forEach(function (k) { body[k] = $(k).value; });
     api('/api/config', body).then(function () { return api('/api/test', {}); }).then(function (r) {
-      box.innerHTML = '<div><b>검색광고 API</b> · ' + esc(r.ad) + '</div><div><b>검색 API</b> · ' + esc(r.search) + '</div>';
+      box.innerHTML = '<div><b>검색광고 API</b> · ' + esc(r.ad) + '</div><div><b>블로그 검색</b> · ' + esc(r.search) + '</div>' + (r.trend ? '<div><b>데이터랩 트렌드</b> · ' + esc(r.trend) + '</div>' : '');
       loadConfig();
     }).catch(function (e) { box.textContent = '오류: ' + e.message; });
   });
@@ -369,7 +481,7 @@ section[hidden] { display: none; }
   setInterval(function () { api('/api/ping').catch(function () {}); }, 10000);
   $('quit').addEventListener('click', function () {
     if (!confirm('프로그램을 종료할까요?')) return;
-    api('/api/quit', {}).finally(function () { document.body.innerHTML = '<main style="padding:40px"><h1>종료되었습니다</h1><p class="sub">이 창은 닫으셔도 됩니다. 다시 쓰려면 프로그램을 다시 실행하세요.</p></main>'; });
+    api('/api/quit', {}).finally(function () { document.body.innerHTML = '<main style="padding:40px"><h1>종료되었습니다</h1><p class="dim">이 창은 닫으셔도 됩니다. 다시 쓰려면 프로그램을 다시 실행하세요.</p></main>'; });
   });
 
   loadConfig().then(function (c) { if (!c.has_ad) show('settings'); else load(); });

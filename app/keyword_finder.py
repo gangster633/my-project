@@ -31,7 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import naver  # noqa: E402
 
 APP_NAME = "황금 키워드 찾기"
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 # PyInstaller로 묶으면 리소스는 _MEIPASS 아래에 풀린다.
 BASE = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
 DATA_DIR = Path(os.environ.get("KEYWORD_FINDER_HOME") or (Path(os.environ.get("APPDATA", Path.home())) / "KeywordFinder"))
@@ -69,6 +69,12 @@ def db():
         docs INTEGER, docs_at TEXT, seed TEXT, updated_at TEXT)""")
     con.execute("""CREATE TABLE IF NOT EXISTS history (
         k TEXT, day TEXT, monthly INTEGER, PRIMARY KEY (k, day))""")
+    # 데이터랩 비율로 추정한 날짜별 검색수 (PC+모바일)
+    con.execute("""CREATE TABLE IF NOT EXISTS trend (
+        k TEXT, day TEXT, est INTEGER, PRIMARY KEY (k, day))""")
+    cols = {r[1] for r in con.execute("PRAGMA table_info(keywords)")}
+    if "trend_at" not in cols:
+        con.execute("ALTER TABLE keywords ADD COLUMN trend_at TEXT")
     return con
 
 
@@ -88,22 +94,41 @@ def change(series, days_back):
     return round((series[-1][1] - old[-1]) / old[-1] * 100, 1)
 
 
+def avg_change(vals, n):
+    """마지막 n일 평균을 그 직전 n일 평균과 비교한 증가율(%)."""
+    if len(vals) < n * 2:
+        return None
+    recent, before = sum(vals[-n:]) / n, sum(vals[-2 * n:-n]) / n
+    if before <= 0:
+        return None
+    return round((recent - before) / before * 100, 1)
+
+
 def all_rows():
     con = db()
-    hist = {}
-    for k, day, monthly in con.execute("SELECT k, day, monthly FROM history ORDER BY day"):
-        hist.setdefault(k, []).append((day, monthly))
+    trend = {}
+    for k, day, est in con.execute("SELECT k, day, est FROM trend ORDER BY day"):
+        trend.setdefault(k, []).append((day, est))
+    latest = (con.execute("SELECT MAX(substr(updated_at, 1, 10)) FROM keywords").fetchone() or [None])[0]
     rows = []
     for k, cat, pc, mo, comp, docs, seed, updated in con.execute(
         "SELECT k, cat, pc, mo, comp, docs, seed, updated_at FROM keywords"
     ):
         monthly = pc + mo
-        series = hist.get(k, [])
+        series = trend.get(k, [])[-30:]
+        vals = [v for _, v in series]
+        has_trend = len(vals) >= 2
+        daily = vals[-1] if has_trend else round(monthly / 30)
         rows.append({
-            "k": k, "cat": cat, "pc": pc, "mo": mo, "monthly": monthly, "daily": round(monthly / 30),
+            "k": k, "cat": cat, "pc": pc, "mo": mo, "monthly": monthly,
+            "daily": daily, "daily_day": series[-1][0] if has_trend else None, "estimated": not has_trend,
+            "d1": round((vals[-1] - vals[-2]) / vals[-2] * 100, 1) if has_trend and vals[-2] > 0 else None,
+            "a3": avg_change(vals, 3), "a7": avg_change(vals, 7),
+            "spark": vals if has_trend else None,
+            "spark_start": series[0][0] if has_trend else None,
             "docs": docs, "ratio": round(docs / max(monthly, 1), 3) if docs is not None else None,
-            "golden": naver.golden_index(monthly, docs), "chg1": change(series, 1), "chg7": change(series, 7),
-            "comp": comp, "seed": seed, "updated": updated,
+            "golden": naver.golden_index(monthly, docs),
+            "comp": comp, "seed": seed, "updated": updated, "latest": bool(updated and updated[:10] == latest),
         })
     con.close()
     return rows
@@ -120,7 +145,7 @@ def set_job(**kw):
         job.update(kw)
 
 
-def run_collect(seeds, category, want_docs, min_monthly, max_docs):
+def run_collect(seeds, category, want_docs, min_monthly, max_docs, want_trend=True, max_trend=1000):
     cfg = load_config()
     try:
         found = {}
@@ -163,6 +188,31 @@ def run_collect(seeds, category, want_docs, min_monthly, max_docs):
                     con.commit()
                     set_job(done=n, message=f"블로그 문서 수 세는 중 ({n:,}/{len(targets):,})")
                 time.sleep(0.11)  # 초당 10회 제한
+            con.commit()
+
+        if want_trend and cfg.get("client_id") and cfg.get("client_secret"):
+            # 데이터랩은 어제까지의 일별 비율을 준다. 최근 30일을 받아 월간 검색수로 환산한다.
+            end = datetime.date.fromisoformat(day) - datetime.timedelta(days=1)
+            days = [(end - datetime.timedelta(days=i)).isoformat() for i in range(29, -1, -1)]
+            done_today = {k for (k,) in con.execute("SELECT k FROM keywords WHERE trend_at = ?", (day,))}
+            targets = sorted((k for k in found if k not in done_today), key=lambda k: -(found[k]["pc"] + found[k]["mo"]))[:max_trend]
+            batches = [targets[i:i + 5] for i in range(0, len(targets), 5)]
+            set_job(done=0, total=len(batches), message="최근 30일 트렌드 받는 중")
+            for n, batch in enumerate(batches, 1):
+                try:
+                    res = naver.search_trend(cfg, batch, days[0], days[-1])
+                except naver.ApiError as e:
+                    if "HTTP 401" in str(e) or "HTTP 403" in str(e):
+                        raise naver.ApiError("트렌드를 받지 못했습니다. NAVER API HUB 앱에 '데이터랩(검색어 트렌드)' API가 추가돼 있는지 확인하세요. " + str(e))
+                    continue
+                for k in batch:
+                    est = naver.estimate_daily(found[k]["pc"] + found[k]["mo"], res.get(k, {}), days)
+                    con.executemany("INSERT OR REPLACE INTO trend (k, day, est) VALUES (?,?,?)", [(k, d, v) for d, v in zip(days, est)])
+                    con.execute("UPDATE keywords SET trend_at=? WHERE k=?", (day, k))
+                if n % 20 == 0:
+                    con.commit()
+                    set_job(done=n, message=f"최근 30일 트렌드 받는 중 ({n * 5:,}/{len(targets):,})")
+                time.sleep(0.15)
             con.commit()
         con.close()
         set_job(running=False, message=f"완료: 키워드 {len(found):,}개 저장", added=len(found))
@@ -233,9 +283,9 @@ class Handler(BaseHTTPRequestHandler):
         if url.path == "/api/export.csv":
             out = io.StringIO()
             w = csv.writer(out)
-            w.writerow(["키워드", "분류", "PC 월검색", "모바일 월검색", "월간 검색 합계", "일 평균", "블로그 문서", "문서/월검색", "황금지수", "전일 대비(%)", "7일 대비(%)", "광고 경쟁", "씨앗 키워드", "갱신"])
+            w.writerow(["키워드", "분류", "PC 월검색", "모바일 월검색", "월간 검색 합계", "일 검색량", "일 검색 기준일", "전일 대비(%)", "3일 평균 증가율(%)", "7일 평균 증가율(%)", "블로그 문서", "문서/월검색", "황금지수", "광고 경쟁", "씨앗 키워드", "갱신"])
             for r in sorted(all_rows(), key=lambda r: (r["golden"] is None, -(r["golden"] or 0), -r["monthly"])):
-                w.writerow([r["k"], r["cat"], r["pc"], r["mo"], r["monthly"], r["daily"], r["docs"], r["ratio"], r["golden"], r["chg1"], r["chg7"], r["comp"], r["seed"], r["updated"]])
+                w.writerow([r["k"], r["cat"], r["pc"], r["mo"], r["monthly"], r["daily"], r["daily_day"] or "추정(월/30)", r["d1"], r["a3"], r["a7"], r["docs"], r["ratio"], r["golden"], r["comp"], r["seed"], r["updated"]])
             name = f"keywords_{today()}.csv"
             return self.send(HTTPStatus.OK, "﻿" + out.getvalue(), "text/csv; charset=utf-8",
                              {"Content-Disposition": f'attachment; filename="{name}"'})
@@ -280,6 +330,12 @@ class Handler(BaseHTTPRequestHandler):
                     result["search"] = f"정상 (예: 노트북 블로그 문서 {naver.blog_total(cfg, '노트북'):,}개)"
                 except naver.ApiError as e:
                     result["search"] = f"실패: {e}"
+                try:
+                    end = datetime.date.fromisoformat(today()) - datetime.timedelta(days=1)
+                    r = naver.search_trend(cfg, ["노트북"], (end - datetime.timedelta(days=6)).isoformat(), end.isoformat())
+                    result["trend"] = f"정상 (예: 노트북 최근 7일 {len(r.get('노트북', {}))}일치)"
+                except naver.ApiError as e:
+                    result["trend"] = f"실패: {e}"
             else:
                 result["search"] = "키가 비어 있습니다 (선택 사항)"
             return self.send(HTTPStatus.OK, result)
@@ -298,6 +354,7 @@ class Handler(BaseHTTPRequestHandler):
             threading.Thread(target=run_collect, daemon=True, args=(
                 seeds, str(data.get("category") or ""), bool(data.get("docs", True)),
                 int(data.get("min_monthly") or 0), int(data.get("max_docs") or 1000),
+                bool(data.get("trend", True)), int(data.get("max_trend") or 1000),
             )).start()
             return self.send(HTTPStatus.OK, {"ok": True})
 
@@ -306,10 +363,12 @@ class Handler(BaseHTTPRequestHandler):
             if data.get("all"):
                 con.execute("DELETE FROM keywords")
                 con.execute("DELETE FROM history")
+                con.execute("DELETE FROM trend")
             else:
                 ks = [str(k) for k in data.get("keywords", [])]
                 con.executemany("DELETE FROM keywords WHERE k=?", [(k,) for k in ks])
                 con.executemany("DELETE FROM history WHERE k=?", [(k,) for k in ks])
+                con.executemany("DELETE FROM trend WHERE k=?", [(k,) for k in ks])
             con.commit()
             con.close()
             return self.send(HTTPStatus.OK, {"ok": True})
