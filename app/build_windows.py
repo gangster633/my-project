@@ -36,8 +36,8 @@ README = """황금 키워드 찾기 {version}
 [처음 설정]
   1. 왼쪽 "API 설정"에 네이버 검색광고 API 키 3개를 넣습니다. (필수)
      searchad.naver.com -> 도구 -> API 사용 관리
-  2. 블로그 문서 수와 황금지수를 보려면 네이버 검색 API 키도 넣습니다. (선택)
-     developers.naver.com -> 애플리케이션 등록 -> 사용 API "검색"
+  2. 블로그 문서 수와 황금지수를 보려면 NAVER API HUB 블로그 검색 키도 넣습니다. (선택)
+     ncloud.com 콘솔 -> NAVER API HUB -> Application 등록(블로그 검색 선택) -> 인증 정보
   3. "연결 테스트"로 키가 맞는지 확인합니다.
 
 [사용]
