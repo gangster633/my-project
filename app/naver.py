@@ -65,6 +65,51 @@ def blog_total(keys, keyword):
     return int(_get_json(f"https://naverapihub.apigw.ntruss.com/search/v1/blog?{q}", headers).get("total", 0))
 
 
+def _post_json(url, headers, body, retries=3):
+    data = json.dumps(body).encode("utf-8")
+    last = None
+    for attempt in range(retries):
+        req = urllib.request.Request(url, data=data, headers={**headers, "Content-Type": "application/json"}, method="POST")
+        try:
+            with urllib.request.urlopen(req, timeout=30) as res:
+                return json.load(res)
+        except urllib.error.HTTPError as e:
+            msg = e.read().decode("utf-8", "replace")[:300]
+            if e.code == 429 or e.code >= 500:
+                last = f"HTTP {e.code}"
+                time.sleep(2 ** attempt * 2)
+                continue
+            if e.code in (401, 403):
+                raise ApiError(f"API 키가 올바르지 않거나 이 API를 쓸 권한이 없습니다 (HTTP {e.code}). {msg}") from None
+            raise ApiError(f"HTTP {e.code}: {msg}") from None
+        except urllib.error.URLError as e:
+            last = str(e.reason)
+            time.sleep(2 ** attempt * 2)
+    raise ApiError(f"네트워크 오류: {last}")
+
+
+def search_trend(keys, keywords, start, end):
+    """NAVER API HUB 데이터랩 검색어 트렌드: 키워드(최대 5개)별 일별 상대지수 {키워드: {날짜: 비율}}.
+    한 요청 안의 모든 키워드 중 최댓값이 100인 상대값이다."""
+    headers = {"X-NCP-APIGW-API-KEY-ID": keys["client_id"], "X-NCP-APIGW-API-KEY": keys["client_secret"]}
+    body = {
+        "startDate": start, "endDate": end, "timeUnit": "date",
+        "keywordGroups": [{"groupName": k, "keywords": [k]} for k in keywords[:5]],
+    }
+    res = _post_json("https://naverapihub.apigw.ntruss.com/search-trend/v1/search", headers, body)
+    return {r["title"]: {d["period"]: float(d["ratio"]) for d in r.get("data", [])} for r in res.get("results", [])}
+
+
+def estimate_daily(monthly, ratios, days):
+    """월간 검색수(최근 30일 합)를 데이터랩 일별 비율로 나눠 날짜별 검색수를 추정한다.
+    요청 단위 정규화 상수는 자기 합으로 나누면서 사라지므로 키워드끼리 묶어 요청해도 된다."""
+    vals = [ratios.get(d, 0.0) for d in days]
+    total = sum(vals)
+    if total <= 0:
+        return [0] * len(days)
+    return [round(monthly * v / total) for v in vals]
+
+
 def golden_index(monthly, docs):
     """검색량 대비 문서가 적을수록, 검색량이 충분할수록 높다 (0~100)."""
     if docs is None:
