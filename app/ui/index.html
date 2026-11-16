@@ -66,7 +66,9 @@ h1 { font-size: 24px; margin: 0; }
 .summary { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; justify-content: space-between; padding: 14px 18px; }
 .summary .n { font-size: 24px; font-weight: 800; margin: 0 4px 0 6px; }
 .notice { padding: 11px 14px; border-radius: 10px; background: var(--gold-soft); color: var(--gold); margin-bottom: 14px; }
-.notice:empty { display: none; }
+.notice:empty, .notice[hidden], .panel[hidden] { display: none; }
+.stale { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.quickbox { padding: 12px 16px; }
 
 .cards { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
 .cards button { text-align: left; background: var(--surface); color: var(--text); border: 1px solid var(--line); padding: 12px; line-height: 1.35; border-radius: 10px; white-space: normal; }
@@ -141,7 +143,11 @@ section[hidden] { display: none; }
   <!-- 키워드 찾기 -->
   <section id="view-list">
     <div class="crumb">키워드 찾기 / 쇼핑 키워드</div>
-    <div class="title-row"><h1>키워드 찾기</h1><span class="live" id="updated">-</span></div>
+    <div class="title-row"><h1>키워드 찾기</h1>
+      <div class="row" style="gap:10px; align-items:center"><span class="live" id="updated">-</span><button id="quick">오늘 수집</button></div>
+    </div>
+    <div class="notice stale" id="stale" hidden></div>
+    <div class="panel quickbox" id="quickbox" hidden><div class="progress" style="margin-top:0"><div id="qbar"></div></div><div class="dim" id="qstatus"></div></div>
 
     <div class="panel summary">
       <div><span class="dim">현재 조건</span><span class="n" id="count">0</span>개 <span class="dim">· 검색량 · 트렌드 · 블로그 문서 수로 찾는 키워드</span></div>
@@ -296,7 +302,8 @@ section[hidden] { display: none; }
     <div class="panel">
       <h2>1. 매일 루틴 (5~10분)</h2>
       <ol>
-        <li><b>수집</b>에서 씨앗 키워드를 붙여넣고 <b>수집 시작</b>. 씨앗은 메모장에 저장해 두고 매일 같은 것을 쓰세요.</li>
+        <li>처음 한 번만 <b>수집</b>에서 씨앗 키워드를 넣고 <b>수집 시작</b>. 씨앗과 옵션은 자동으로 기억됩니다.</li>
+        <li>다음 날부터는 <b>키워드</b> 화면 오른쪽 위 <b>오늘 수집</b>만 누르면 됩니다. 하루 넘게 수집을 안 했으면 화면 위에 알림이 뜹니다.</li>
         <li>끝나면 <b>키워드</b>로 가서 <b>최신 자료 기준만</b>을 체크 → <b>조건 적용</b>.</li>
         <li>아래 탭을 차례로 눌러 후보를 고르고, <b>엑셀(CSV) 저장</b>으로 모아 둡니다.</li>
       </ol>
@@ -480,6 +487,15 @@ section[hidden] { display: none; }
       rows = d.rows; renderCats(); readFilters(); render();
       var last = rows.reduce(function (m, r) { return r.updated && r.updated > m ? r.updated : m; }, '');
       $('updated').textContent = last ? last + ' 갱신' : '수집 전';
+      var today = config && config.today;
+      var stale = rows.length && today && last && last.slice(0, 10) < today && !polling;
+      $('stale').hidden = !stale;
+      if (stale) {
+        var days = Math.round((new Date(today) - new Date(last.slice(0, 10))) / 86400000);
+        $('stale').innerHTML = '<span>마지막 수집이 <b>' + days + '일 전</b>(' + esc(last) + ')입니다. 최신 데이터를 보려면 수집하세요.</span>' +
+          (config.seeds ? '<button id="stale-go">지금 수집</button>' : '<button id="stale-go" class="ghost">수집 화면으로</button>');
+        $('stale-go').onclick = function () { config.seeds ? $('quick').click() : show('collect'); };
+      }
       var msg = [];
       if (rows.length && !rows.some(function (r) { return r.spark; })) msg.push('30일 트렌드가 없어 일 검색량은 월간÷30 추정값이고, 급등·평균 상승 탭이 비어 있습니다.');
       if (rows.length && !rows.some(function (r) { return r.docs != null; })) msg.push('블로그 문서 수가 없어 황금지수가 비어 있습니다.');
@@ -514,28 +530,50 @@ section[hidden] { display: none; }
   var polling = null;
   function poll() {
     api('/api/job').then(function (j) {
-      $('bar').style.width = (j.total ? Math.round(j.done / j.total * 100) : (j.running ? 5 : 0)) + '%';
-      $('status').textContent = j.error ? '실패: ' + j.error : j.message;
+      var w = (j.total ? Math.round(j.done / j.total * 100) : (j.running ? 5 : 0)) + '%';
+      var msg = j.error ? '실패: ' + j.error : j.message;
+      $('bar').style.width = w; $('qbar').style.width = w;
+      $('status').textContent = msg; $('qstatus').textContent = msg;
       $('status').classList.toggle('err', !!j.error);
-      $('start').disabled = j.running;
+      $('start').disabled = j.running; $('quick').disabled = j.running;
+      $('quickbox').hidden = !j.running && !j.error;
+      if (j.running) { $('quick').textContent = '수집 중…'; $('stale').hidden = true; }
       if (!j.running) {
         clearInterval(polling); polling = null;
-        if (!j.error && j.added) { $('bar').style.width = '100%'; toast(j.message); }
+        $('quick').textContent = '오늘 수집';
+        if (!j.error && j.added) { $('bar').style.width = '100%'; toast(j.message); load(); }
       }
     });
   }
+  function startPolling() { if (!polling) polling = setInterval(poll, 800); poll(); }
+  $('quick').addEventListener('click', function () {
+    if (!config || !config.seeds) { toast('저장된 씨앗이 없습니다. 먼저 수집 화면에서 씨앗을 넣어 주세요.'); show('collect'); return; }
+    api('/api/collect', { use_saved: true }).then(startPolling).catch(function (e) { toast(e.message); });
+  });
   $('start').addEventListener('click', function () {
     api('/api/collect', { seeds: $('seeds').value, category: $('c-cat').value, docs: $('c-docs').checked, trend: $('c-trend').checked,
       min_monthly: Number($('c-min').value), max_docs: Number($('c-max').value), max_trend: Number($('c-tmax').value) })
-      .then(function () { $('start').disabled = true; if (!polling) polling = setInterval(poll, 800); poll(); })
+      .then(function () { $('start').disabled = true; if (config) config.seeds = $('seeds').value; startPolling(); })
       .catch(function (e) { $('status').textContent = e.message; $('status').classList.add('err'); });
   });
 
   // ---------- 설정 ----------
   var KEYS = ['ad_api_key', 'ad_secret', 'ad_customer_id', 'client_id', 'client_secret'];
+  var config = null;
   function loadConfig() {
     return api('/api/config').then(function (c) {
+      config = c;
       window._cats = c.categories;
+      if (!$('seeds').value && c.seeds) {
+        $('seeds').value = c.seeds;
+        var o = c.collect_opts || {};
+        if (o.min_monthly != null) $('c-min').value = o.min_monthly;
+        if (o.max_docs != null) $('c-max').value = o.max_docs;
+        if (o.max_trend != null) $('c-tmax').value = o.max_trend;
+        if (o.docs != null) $('c-docs').checked = o.docs;
+        if (o.trend != null) $('c-trend').checked = o.trend;
+        setTimeout(function () { if (o.category) $('c-cat').value = o.category; });
+      }
       KEYS.forEach(function (k) { $(k).value = ''; $(k).placeholder = c.masked[k] ? '저장됨 (' + c.masked[k] + ') · 바꾸려면 새로 입력' : '입력하세요'; });
       $('data-dir').textContent = c.data_dir;
       if ($('c-cat').options.length <= 1) $('c-cat').insertAdjacentHTML('beforeend', c.categories.map(function (x) { return '<option>' + esc(x) + '</option>'; }).join(''));
@@ -568,7 +606,7 @@ section[hidden] { display: none; }
   });
 
   loadConfig().then(function (c) { if (!c.has_ad) show('settings'); else load(); });
-  api('/api/job').then(function (j) { if (j.running && !polling) polling = setInterval(poll, 800); });
+  api('/api/job').then(function (j) { if (j.running) startPolling(); });
 })();
 </script>
 </body>
