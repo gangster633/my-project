@@ -31,7 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import naver  # noqa: E402
 
 APP_NAME = "황금 키워드 찾기"
-VERSION = "0.4.0"
+VERSION = "0.5.0"
 # PyInstaller로 묶으면 리소스는 _MEIPASS 아래에 풀린다.
 BASE = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
 DATA_DIR = Path(os.environ.get("KEYWORD_FINDER_HOME") or (Path(os.environ.get("APPDATA", Path.home())) / "KeywordFinder"))
@@ -291,6 +291,9 @@ class Handler(BaseHTTPRequestHandler):
                 "masked": {f: (cfg[f][:4] + "…" + cfg[f][-2:]) if cfg.get(f) and len(str(cfg[f])) > 8 else ("●●●" if cfg.get(f) else "") for f in KEY_FIELDS},
                 "data_dir": str(DATA_DIR),
                 "categories": categorize.categories,
+                "seeds": cfg.get("seeds", ""),
+                "collect_opts": cfg.get("collect_opts", {}),
+                "today": today(),
             })
         if url.path == "/api/job":
             with job_lock:
@@ -358,10 +361,17 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(HTTPStatus.OK, result)
 
         if path == "/api/collect":
+            cfg = load_config()
+            if data.get("use_saved"):  # "오늘 수집" 버튼: 마지막에 쓴 씨앗과 옵션 그대로
+                data = {**cfg.get("collect_opts", {}), "seeds": cfg.get("seeds", "")}
+            else:  # 다음에 다시 쓰도록 씨앗과 옵션을 기억한다
+                cfg["seeds"] = str(data.get("seeds", ""))
+                cfg["collect_opts"] = {k: data[k] for k in ("category", "docs", "trend", "min_monthly", "max_docs", "max_trend") if k in data}
+                save_config(cfg)
             seeds = [s.strip().replace(" ", "") for s in str(data.get("seeds", "")).replace(",", "\n").splitlines()]
             seeds = list(dict.fromkeys(s for s in seeds if s))
             if not seeds:
-                return self.send(HTTPStatus.BAD_REQUEST, {"error": "씨앗 키워드를 한 개 이상 입력하세요."})
+                return self.send(HTTPStatus.BAD_REQUEST, {"error": "씨앗 키워드를 한 개 이상 입력하세요." if not data.get("use_saved") else "저장된 씨앗이 없습니다. 먼저 '수집'에서 씨앗을 넣고 한 번 수집하세요."})
             if not all(load_config().get(f) for f in KEY_FIELDS[:3]):
                 return self.send(HTTPStatus.BAD_REQUEST, {"error": "설정에서 검색광고 API 키 3개를 먼저 넣어 주세요."})
             with job_lock:
