@@ -270,13 +270,21 @@ def synth_one(cfg, provider, voice, text, out_base, speed=1.0, style=""):
 
 # ---------------- 이미지 ----------------
 
-def generate_image(cfg, provider, prompt, out_base, aspect="16:9"):
+def generate_image(cfg, provider, prompt, out_base, aspect="16:9", ref_image=None):
+    """ref_image: 화풍 기준 그림 경로 (Gemini 만 사용). 그림체를 맞추는 데만 쓰고 내용은 따라 하지 않게 지시한다."""
     if provider == "gemini":
         key = cfg.get("gemini_key")
         if not key:
             raise AiError("설정에서 Google Gemini API 키를 넣어 주세요.")
         model = cfg.get("gemini_image_model") or "gemini-2.5-flash-image"
-        body = {"contents": [{"parts": [{"text": prompt}]}],
+        parts = []
+        if ref_image and Path(ref_image).exists():
+            mime = "image/jpeg" if Path(ref_image).suffix.lower() in (".jpg", ".jpeg") else "image/png"
+            parts.append({"inlineData": {"mimeType": mime, "data": base64.b64encode(Path(ref_image).read_bytes()).decode()}})
+            prompt = ("Use the attached image only as an art style reference (line work, coloring, texture, lighting). "
+                      "Do not copy its content or composition. Draw this scene: " + prompt)
+        parts.append({"text": prompt})
+        body = {"contents": [{"parts": parts}],
                 "generationConfig": {"responseModalities": ["IMAGE"], "imageConfig": {"aspectRatio": aspect}}}
         r = http_json(f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent", body,
                       {"x-goog-api-key": key}, timeout=240, retries=4)

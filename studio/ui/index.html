@@ -181,6 +181,7 @@ const SUB_PRESETS = [
   {name: "공포 몰입", css: "color:#ff3b3b;background:#000", v: {color: "#ff4d4d", accent: "#ffffff", box: true, box_color: "#000000", box_opacity: 0.85, bold: true, size: 17, position: "bottom"}},
   {name: "예능 빨간 띠", css: "background:#e11d48;color:#fff", v: {color: "#ffffff", accent: "#ffe400", box: true, box_color: "#e11d48", box_opacity: 0.95, bold: true, size: 18, position: "bottom"}},
   {name: "시니어 큰 글씨", css: "background:#000;color:#fff;font-size:15px", v: {color: "#ffffff", accent: "#7dd3fc", box: true, box_color: "#000000", box_opacity: 0.8, bold: true, size: 22, position: "bottom", max_chars: 18}},
+  {name: "이슈 채널", css: "color:#fff;-webkit-text-stroke:1px #000", v: {color: "#ffffff", accent: "#ffe066", box: false, outline: 2.6, outline_color: "#000000", bold: true, size: 20, position: "bottom", margin: 0.07}},
   {name: "미니멀", css: "color:#fff;text-shadow:0 1px 3px #000", v: {color: "#ffffff", accent: "#ffffff", box: false, outline: 0.6, outline_color: "#000000", bold: false, size: 15, position: "bottom", highlight_numbers: false}},
   {name: "가운데 크게", css: "color:#fff;-webkit-text-stroke:1px #000;background:#0006", v: {color: "#ffffff", accent: "#ffe400", box: false, outline: 2.5, outline_color: "#000000", bold: true, size: 22, position: "center"}},
 ];
@@ -325,6 +326,7 @@ function watchJob() {
     state.jobWatch = null;
     if (j.error) toast(j.error, true); else toast(j.message === "완료" ? "완료했어요" : j.message);
     setTimeout(() => { if (!state.jobWatch) $("#jobbar").hidden = true; }, j.error ? 12000 : 2500);
+    if (j.step === "style_examples") state.cfg = await api("/api/config");
     if (state.pid === j.pid && !["home", "settings", "guide"].includes(state.view)) { await loadProject(); render(); }
     else if (state.view === "home") viewHome();
   };
@@ -554,29 +556,52 @@ async function makeVoiceLang(l) { const v = JSON.parse($("#ml_" + l).value); run
 // ---------------- 3. 화풍 ----------------
 const STYLE_BG = {cinematic: "#3d5a6c,#c49a6c", pixar3d: "#f59e0b,#3b82f6", miniature: "#86efac,#f9a8d4", cyberpunk: "#7c3aed,#06b6d4", webtoon: "#60a5fa,#fde68a", joseon: "#a8a29e,#57534e",
   ghibli_like: "#4ade80,#93c5fd", retro_anime: "#f9a8d4,#a78bfa", infographic: "#1e3a8a,#f97316", news_photo: "#64748b,#334155", flat: "#34d399,#fbbf24", whiteboard: "#f8fafc,#94a3b8",
-  dark_horror: "#111827,#7f1d1d", oil: "#92400e,#1e3a8a", senior_warm: "#fed7aa,#fecdd3", pixel: "#22c55e,#6366f1"};
+  dark_horror: "#111827,#7f1d1d", oil: "#92400e,#1e3a8a", senior_warm: "#fed7aa,#fecdd3", pixel: "#22c55e,#6366f1",
+  issue_ink: "#f59e0b,#1e293b", pop_comic: "#ef4444,#facc15", chibi: "#f9a8d4,#bae6fd"};
 function viewStyle() {
   const p = state.p, st = p.style;
   const groups = [...new Set(state.cfg.styles.map(s => s.group))];
   const secs = p.audio ? p.audio.total : stripCount(p.script) / 7.5;
-  $("#main").innerHTML = header("style", "영상 전체에 쓸 화풍과 반복해 나올 인물을 정해요. 인물 설명은 모든 장면 프롬프트에 똑같이 들어가 얼굴과 옷차림이 흔들리지 않아요.") +
-    `<div class="panel"><div class="row"><h2 class="grow" style="margin:0">화풍 <span class="tiny dim">${state.cfg.styles.length}종</span></h2></div>
-    ${groups.map(g => `<h3 style="margin-top:14px">${g}</h3><div class="cards">${state.cfg.styles.filter(s => s.group === g).map(s => `<button class="card style-card vc" style="padding:0" aria-selected="${st.id === s.id && !st.custom}" onclick="pickStyle('${s.id}')">
-      <div class="th" style="background-image:linear-gradient(135deg,${STYLE_BG[s.id] || "#334155,#0f172a"})">${esc(s.name)}</div><div class="bd"><div class="tiny dim">${esc(s.desc)}</div></div></button>`).join("")}</div>`).join("")}
-    <label class="field" style="margin-top:14px"><span>직접 입력 화풍 (영어 권장, 쓰면 위 선택보다 우선)</span><input id="st_custom" value="${esc(st.custom)}" placeholder="예: soft pastel children's book illustration, crayon texture"></label></div>
+  const ex = state.cfg.style_examples || {};
+  const missing = state.cfg.styles.filter(s => !ex[s.id]).map(s => s.id);
+  const canAuto = state.cfg.keys.gemini_key || state.cfg.keys.openai_key;
+  const cnt = n => Math.max(3, Math.round(secs / n));
+  $("#main").innerHTML = header("style", "영상 전체에 쓸 화풍과 반복해 나올 인물을 정해요. 예시 그림은 모든 화풍을 같은 장면으로 그려 비교하기 쉽게 했어요.") +
+    `<div class="panel"><div class="row"><h2 class="grow" style="margin:0">화풍 <span class="tiny dim">${state.cfg.styles.length}종 · 예시 그림 ${state.cfg.styles.length - missing.length}/${state.cfg.styles.length}</span></h2>
+      ${canAuto ? `${missing.length ? `<button class="sm" onclick='runStep("style_examples",{ids:${JSON.stringify(missing)}})'>빈 예시 그림 만들기 (${missing.length}장, 약 ${missing.length * 60}원)</button>` : ""}
+      <button class="sm ghost" onclick="if(confirm('예시 그림을 모두 새로 만들까요?'))runStep('style_examples',{})">예시 다시 만들기</button>` : ""}</div>
+    ${canAuto ? "" : `<div class="hint">키가 없으면 카드의 ✎로 예시 프롬프트를 복사해 Gemini 앱 등에서 그림을 만든 뒤, 카드에 끌어다 놓으세요. 한 번 만들어 두면 모든 프로젝트에서 써요.</div>`}
+    ${groups.map(g => `<h3 style="margin-top:14px">${g}</h3><div class="cards">${state.cfg.styles.filter(s => s.group === g).map(s => `<div class="card style-card vc" style="padding:0" data-style="${s.id}" aria-selected="${st.id === s.id && !st.custom}" onclick="pickStyle('${s.id}')">
+      <div class="th" style="background-image:${ex[s.id] ? `url('/files/_styles/${ex[s.id]}&token=${TOKEN}')` : `linear-gradient(135deg,${STYLE_BG[s.id] || "#334155,#0f172a"})`}">${ex[s.id] ? "" : esc(s.name)}</div>
+      <div class="bd"><div class="row" style="gap:4px"><b class="grow">${esc(s.name)}</b><button class="link sm" title="예시 프롬프트 복사" onclick="event.stopPropagation();copyStylePrompt('${s.id}')">✎</button><button class="link sm" title="예시 그림 올리기" onclick="event.stopPropagation();pickStyleImage('${s.id}')">올리기</button></div><div class="tiny dim">${esc(s.desc)}</div></div></div>`).join("")}</div>`).join("")}
+    <label class="field" style="margin-top:14px"><span>직접 입력 화풍 (영어 권장, 쓰면 위 선택보다 우선)</span><input id="st_custom" value="${esc(st.custom)}" placeholder="예: soft pastel children's book illustration, crayon texture"></label>
+    <label class="row" style="margin-top:10px"><input type="checkbox" id="st_ref" ${st.use_ref !== false ? "checked" : ""}> 고른 화풍의 예시 그림을 그림체 기준으로 함께 보내기 (Gemini 이미지, 그림체가 덜 흔들려요)</label>
+    <label class="row" style="margin-top:6px"><input type="checkbox" id="st_text" ${st.allow_text ? "checked" : ""}> 그림 속 한글 허용 (간판·출석부·표지판 같은 글자를 한글로 그려요)</label></div>
     <div class="grid2"><div class="panel"><h2>등장인물</h2>
       <textarea id="st_char" rows="4" placeholder="예: Korean man in his 40s, short black hair, navy suit, round glasses (비워 두면 스토리보드에서 AI가 정해요)">${esc(st.character)}</textarea>
       <p class="tiny dim">실존 인물의 이름이나 얼굴을 쓰지 말고 외형만 묘사하세요.</p></div>
       <div class="panel"><h2>장면 길이</h2>
-      <label class="field"><span>한 장면 평균 <b id="secv">${st.scene_seconds}초</b> → 약 <b id="cntv">${Math.max(3, Math.round(secs / st.scene_seconds))}</b>컷</span><input type="range" id="st_sec" min="3" max="20" step="1" value="${st.scene_seconds}"></label>
-      <p class="tiny dim">짧을수록 화면이 자주 바뀌어 지루함이 줄지만 이미지가 많이 필요해요. 도입부는 AI가 더 짧게 끊어요.</p></div></div>
+      <label class="field"><span>한 장면 평균 <b id="secv">${st.scene_seconds}초</b> → 약 <b id="cntv">${cnt(st.scene_seconds)}</b>컷</span><input type="range" id="st_sec" min="3" max="120" step="1" value="${st.scene_seconds}"></label>
+      <div class="row tiny" style="margin-top:6px">빠른 선택: ${[[6, "빠른 전개"], [10, "보통"], [30, "차분"], [65, "이슈 해설형 (25분에 약 23장)"]].map(([v, n]) => `<button class="sm ghost" onclick="setSceneSec(${v})">${n}</button>`).join("")}</div>
+      <p class="tiny dim">짧을수록 화면이 자주 바뀌지만 그림이 많이 필요해요. 길면 그림 수와 비용이 크게 줄고, 한 그림을 천천히 움직이며 보여 줘요.</p></div></div>
+    <input type="file" id="st_file" hidden accept="image/*">
     <div class="next"><button class="ghost" onclick="go('voice')">← 음성</button><button onclick="saveStyle(true)">다음: 스토리보드 →</button></div>`;
-  $("#st_sec").oninput = e => { $("#secv").textContent = e.target.value + "초"; $("#cntv").textContent = Math.max(3, Math.round(secs / e.target.value)); };
-  ["#st_custom", "#st_char", "#st_sec"].forEach(s => $(s).addEventListener("change", () => saveStyle(false)));
+  $("#st_sec").oninput = e => { $("#secv").textContent = e.target.value + "초"; $("#cntv").textContent = cnt(+e.target.value); };
+  ["#st_custom", "#st_char", "#st_sec", "#st_ref", "#st_text"].forEach(s => $(s).addEventListener("change", () => saveStyle(false)));
+  document.querySelectorAll("[data-style]").forEach(c => {
+    c.ondragover = e => { e.preventDefault(); c.style.outline = "2px dashed var(--accent)"; };
+    c.ondragleave = () => c.style.outline = "";
+    c.ondrop = e => { e.preventDefault(); c.style.outline = ""; const f = e.dataTransfer.files[0]; if (f) putStyleImage(c.dataset.style, f); };
+  });
 }
+function setSceneSec(v) { $("#st_sec").value = v; $("#st_sec").dispatchEvent(new Event("input")); saveStyle(false); }
+async function copyStylePrompt(id) { const {prompt} = await api(`/api/prompt?id=${state.pid}&step=style:${id}`); copy(prompt); }
+function pickStyleImage(id) { const inp = $("#st_file"); inp.onchange = () => inp.files[0] && putStyleImage(id, inp.files[0]); inp.value = ""; inp.click(); }
+async function putStyleImage(id, f) { try { await upload(f, {kind: "style", style: id, token: TOKEN}); state.cfg = await api("/api/config"); viewStyle(); toast("예시 그림을 넣었어요"); } catch (e) { fail(e); } }
 async function pickStyle(id) { $("#st_custom").value = ""; state.p.style.id = id; await saveStyle(false); viewStyle(); drawSteps(); }
 async function saveStyle(next) {
-  const st = {...state.p.style, custom: $("#st_custom").value, character: $("#st_char").value, scene_seconds: +$("#st_sec").value, chosen: true};
+  const st = {...state.p.style, custom: $("#st_custom").value, character: $("#st_char").value, scene_seconds: +$("#st_sec").value,
+    use_ref: $("#st_ref").checked, allow_text: $("#st_text").checked, chosen: true};
   await save({style: st}, true);
   if (next) go("storyboard"); else drawSteps();
 }
@@ -766,7 +791,7 @@ function subPreset(i) {
   const v = SUB_PRESETS[i].v;
   const set = (id, val) => { const el = $(id); if (el.type === "checkbox") el.checked = val; else el.value = val; };
   set("#sb_color", v.color); set("#sb_acc", v.accent); set("#sb_box", !!v.box); if (v.box_color) set("#sb_boxc", v.box_color); if (v.box_opacity !== undefined) set("#sb_bo", v.box_opacity);
-  set("#sb_bold", v.bold); set("#sb_size", v.size); if (v.outline !== undefined) set("#sb_ol", v.outline); set("#sb_pos", v.position); set("#sb_hl", v.highlight_numbers !== false); if (v.max_chars) set("#sb_mc", v.max_chars);
+  set("#sb_bold", v.bold); set("#sb_size", v.size); if (v.outline !== undefined) set("#sb_ol", v.outline); if (v.margin !== undefined) set("#sb_mg", v.margin); set("#sb_pos", v.position); set("#sb_hl", v.highlight_numbers !== false); if (v.max_chars) set("#sb_mc", v.max_chars);
   state.p.sub.outline_color = v.outline_color || "#000000";
   document.querySelectorAll("#main input[type=range]").forEach(el => el.dispatchEvent(new Event("input")));
   saveVideoForm();

@@ -34,13 +34,15 @@ import prompts  # noqa: E402
 import render  # noqa: E402
 
 APP_NAME = "AI 영상 공방"
-VERSION = "1.0.1"
+VERSION = "1.1.0"
 DATA_DIR = Path(os.environ.get("VIDEO_WORKSHOP_HOME") or (Path(os.environ.get("APPDATA", Path.home())) / "VideoWorkshop"))
 PROJECTS = DATA_DIR / "projects"
 CONFIG = DATA_DIR / "config.json"
 RUNNING = DATA_DIR / "running.json"
 USER_FONTS = DATA_DIR / "fonts"
 PREVIEWS = DATA_DIR / "previews"
+STYLE_DIR = DATA_DIR / "style_examples"
+pipeline.STYLE_DIR = STYLE_DIR
 TOKEN = secrets.token_urlsafe(24)
 last_ping = [time.time()]
 IDLE_EXIT = 180
@@ -136,7 +138,7 @@ def set_job(**kw):
 
 STEP_NAMES = {"script": "대본", "factcheck": "사실 대조", "translate": "번역", "voice": "음성", "storyboard": "스토리보드",
               "images": "이미지", "render": "영상", "shorts": "쇼츠", "thumbs": "썸네일", "meta": "업로드 정보",
-              "auto": "원클릭 자동 제작", "package": "편집용 묶음"}
+              "auto": "원클릭 자동 제작", "package": "편집용 묶음", "style_examples": "화풍 예시 그림"}
 
 
 def start_job(pid, step, opts):
@@ -212,6 +214,8 @@ def _run_step(p, cfg, ctx, folder, s, opts):
         if cfg.get("text_provider") == "manual" and opts.get("auto"):
             return
         pipeline.run_meta(p, cfg, ctx)
+    elif s == "style_examples":
+        pipeline.run_style_examples(cfg, ctx, opts.get("ids") or [x[0] for x in prompts.STYLES], opts.get("provider"))
     elif s == "package":
         ctx.report(message="편집용 묶음 만드는 중")
         pipeline.export_package(p, folder)
@@ -312,6 +316,8 @@ class Handler(BaseHTTPRequestHandler):
             parts = unquote(path[len("/files/"):]).split("/", 1)
             if parts[0] == "_preview":
                 base = PREVIEWS
+            elif parts[0] == "_styles":
+                base = STYLE_DIR
             else:
                 base = pdir(parts[0])
             f = (base / parts[1]).resolve()
@@ -327,6 +333,7 @@ class Handler(BaseHTTPRequestHandler):
                 "settings": {k: cfg.get(k) for k in SETTING_FIELDS},
                 "styles": [{"id": s[0], "group": s[1], "name": s[2], "desc": s[3], "prompt": s[4]} for s in prompts.STYLES],
                 "categories": list(prompts.CATEGORIES) + [c for c in (cfg.get("categories_custom") or "").split(",") if c.strip()],
+                "style_examples": {f.stem: f"{f.name}?t={int(f.stat().st_mtime)}" for f in sorted(STYLE_DIR.glob("*.*")) if not f.stem.startswith("_")} if STYLE_DIR.exists() else {},
                 "fonts": fonts, "ffmpeg": render.ffmpeg_ok(), "data_dir": str(DATA_DIR), "version": VERSION,
                 "defaults": {"claude_model": ai.CLAUDE_DEFAULT, "openai_text_model": ai.OPENAI_TEXT_DEFAULT,
                              "gemini_text_model": ai.GEMINI_TEXT_DEFAULT},
@@ -363,6 +370,8 @@ class Handler(BaseHTTPRequestHandler):
                 text = pipeline.meta_prompt(p)
             elif step == "images":
                 text = pipeline.all_prompts_text(p)
+            elif step.startswith("style:"):
+                text = prompts.style_sample_prompt(step.split(":", 1)[1])
             else:
                 raise ValueError("알 수 없는 단계")
             return self.send(HTTPStatus.OK, {"prompt": text})
@@ -396,9 +405,18 @@ class Handler(BaseHTTPRequestHandler):
             raise ValueError("파일이 너무 큽니다")
         allowed = {"scene": (".png", ".jpg", ".jpeg", ".webp", ".mp4", ".mov", ".webm", ".m4v"),
                    "logo": (".png", ".jpg", ".jpeg", ".webp"), "bgm": (".mp3", ".wav", ".m4a", ".ogg", ".aac", ".flac"),
-                   "font": (".ttf", ".otf", ".ttc")}
+                   "font": (".ttf", ".otf", ".ttc"), "style": (".png", ".jpg", ".jpeg", ".webp")}
         if kind not in allowed or ext not in allowed[kind]:
             raise ValueError(f"이 파일 형식은 쓸 수 없습니다: {ext}")
+        if kind == "style":
+            sid = one("style")
+            if sid not in prompts.STYLE_MAP:
+                raise ValueError("없는 화풍")
+            STYLE_DIR.mkdir(parents=True, exist_ok=True)
+            for old in STYLE_DIR.glob(f"{sid}.*"):
+                old.unlink()
+            self._save_body(STYLE_DIR / f"{sid}{ext}", n)
+            return self.send(HTTPStatus.OK, {"ok": True})
         if kind == "font":
             USER_FONTS.mkdir(parents=True, exist_ok=True)
             dst = USER_FONTS / name

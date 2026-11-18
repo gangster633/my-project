@@ -374,8 +374,41 @@ def image_prompt(p, scene):
     if char:
         parts.append(f"Recurring character (keep identical): {char}")
     parts.append(f"Art style: {style_prompt(p)}")
-    parts.append("No text, no letters, no captions, no watermark, no logo.")
+    if p["style"].get("allow_text"):
+        parts.append("Any visible signs, labels or handwriting must be short, correct Korean (Hangul). No captions, no watermark, no logo.")
+    else:
+        parts.append("No text, no letters, no captions, no watermark, no logo.")
     return ". ".join(x.strip().rstrip(".") for x in parts if x.strip()) + "."
+
+
+STYLE_DIR = None  # studio.py 가 정한다 (%APPDATA%\\VideoWorkshop\\style_examples)
+
+
+def style_example(style_id):
+    if not STYLE_DIR or not style_id:
+        return None
+    found = sorted(Path(STYLE_DIR).glob(f"{style_id}.*"))
+    return found[0] if found else None
+
+
+def run_style_examples(cfg, ctx, ids, provider=None):
+    prov = provider or cfg.get("image_provider") or ("gemini" if cfg.get("gemini_key") else "openai" if cfg.get("openai_key") else "")
+    if prov not in ("gemini", "openai"):
+        raise ai.AiError("예시 그림을 자동으로 만들려면 Gemini나 OpenAI 키가 필요해요. 키가 없으면 카드에 그림을 끌어다 놓으세요.")
+    Path(STYLE_DIR).mkdir(parents=True, exist_ok=True)
+    errors = []
+    for n, sid in enumerate(ids, 1):
+        ctx.check()
+        ctx.report(message=f"화풍 예시 그림 만드는 중 ({n}/{len(ids)})", done=n - 1, total=len(ids))
+        try:
+            tmp = ai.generate_image(cfg, prov, prompts.style_sample_prompt(sid), Path(STYLE_DIR) / f"_new_{sid}", "16:9")
+            for old in Path(STYLE_DIR).glob(f"{sid}.*"):
+                old.unlink()
+            tmp.rename(Path(STYLE_DIR) / f"{sid}{tmp.suffix}")
+        except ai.AiError as e:
+            errors.append(f"{prompts.STYLE_MAP[sid][2]}: {e}")
+    if errors:
+        raise ai.AiError(f"{len(errors)}개 실패 (나머지는 저장됨). " + " / ".join(errors[:2]))
 
 
 def run_images(p, cfg, ctx, folder, only=None, provider=None, overwrite=False):
@@ -390,6 +423,8 @@ def run_images(p, cfg, ctx, folder, only=None, provider=None, overwrite=False):
     done, errors = [0], []
     ctx.report(message=f"이미지 만드는 중 (0/{len(idxs)})", done=0, total=len(idxs))
     font_rel = _ensure_font(p, folder) if prov == "placeholder" else None
+    # 고른 화풍의 예시 그림을 기준으로 보내 그림체를 맞춘다 (직접 입력 화풍이면 쓰지 않음)
+    ref = style_example(p["style"].get("id")) if p["style"].get("use_ref", True) and not (p["style"].get("custom") or "").strip() else None
 
     def work(i):
         ctx.check()
@@ -401,7 +436,7 @@ def run_images(p, cfg, ctx, folder, only=None, provider=None, overwrite=False):
                 render.placeholder_image(folder, f"images/{name}", sc.get("visual") or sc.get("prompt", ""), i, W // 2, H // 2, font_rel)
                 f = idir / name
             else:
-                f = ai.generate_image(cfg, prov, image_prompt(p, sc), base, aspect)
+                f = ai.generate_image(cfg, prov, image_prompt(p, sc), base, aspect, ref_image=ref)
             old = sc.get("image")
             sc["image"] = f"images/{f.name}"
             sc["image_prompt_used"] = image_prompt(p, sc)

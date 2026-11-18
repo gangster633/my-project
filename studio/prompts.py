@@ -39,7 +39,22 @@ STYLES = [
      "warm soft illustration, gentle pastel colors, cozy everyday Korean life, heartwarming mood"),
     ("pixel", "분위기", "픽셀 아트", "레트로 게임 도트 그래픽",
      "detailed 16-bit pixel art, retro game aesthetic, vibrant limited palette"),
+    ("issue_ink", "정보·뉴스", "이슈 해설 일러스트", "굵은 펜 선과 수채 채색, 해질녘 한국 골목·아파트 풍경",
+     "detailed Korean editorial illustration, bold ink outlines with watercolor wash, warm dusk lighting, "
+     "everyday Korean streets and buildings, rich background detail, storytelling composition"),
+    ("pop_comic", "만화·애니", "코믹 팝아트", "굵은 윤곽선과 강렬한 원색의 미국 코믹스",
+     "American comic book pop art, bold black outlines, halftone dots, vivid primary colors"),
+    ("chibi", "만화·애니", "치비", "머리가 큰 귀여운 2등신 캐릭터",
+     "cute chibi illustration, big heads and small bodies, soft pastel colors, rounded shapes"),
 ]
+# 화풍 예시 그림: 모든 화풍을 같은 장면으로 그려 비교하게 한다
+STYLE_SAMPLE_SCENE = ("A small Korean town street at golden hour, a middle-aged person walking toward the viewer, "
+                      "low houses and shops on both sides, mountains in the background")
+
+
+def style_sample_prompt(style_id):
+    s = STYLE_MAP[style_id]
+    return f"{STYLE_SAMPLE_SCENE}. Art style: {s[4]}. No text, no watermark."
 STYLE_MAP = {s[0]: s for s in STYLES}
 
 # ---------------- 채널 성격(카테고리) ----------------
@@ -76,6 +91,7 @@ def build_script(topic, source, minutes, chars, category, tone_note="", lang="ko
 
 [구성]
 1. 첫 3문장: 인사 없이 가장 궁금한 장면·숫자·질문으로 시작한다. 끝까지 보면 무엇을 알게 되는지 약속한다.
+   바로 다음에 자료의 출처와 한계를 한 문장으로 밝혀 신뢰를 준다(예: "지금 다루는 숫자는 ○○ 발표 자료예요").
 2. 본문은 3~6개 구간. 각 구간은 '## 소제목' 한 줄로 시작한다(소제목은 낭독하지 않고 챕터로만 쓴다).
 3. 구간이 끝날 때마다 다음 내용을 궁금하게 만드는 연결 문장을 둔다.
 4. 마지막은 핵심 3가지 요약과 시청자에게 던지는 질문으로 끝낸다. {cta_rule}
