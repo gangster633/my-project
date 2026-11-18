@@ -652,21 +652,114 @@ function viewImage() {
       <button onclick="runStep('images',{provider:'${prov}'})">빈 장면 모두 만들기 (${sb.scenes.length - done}장)</button>
       <button class="ghost" onclick="if(confirm('모든 장면 그림을 새로 만들까요?'))runStep('images',{provider:'${prov}',overwrite:true})">전체 다시 만들기</button>
       <span class="grow"></span><span class="pill ${done === sb.scenes.length ? "ok" : "acc"}">${done}/${sb.scenes.length} 완료</span></div>
-      <div class="hint" style="margin-top:12px"><b>다른 사이트에서 만들 때</b> ① <a href="#" onclick="copyAllPrompts();return false">전체 프롬프트 복사</a> → ② 원하는 사이트에서 그림 생성 → ③ 장면 카드에 끌어다 놓기 또는 [교체]. 카드의 ✎로 프롬프트를 하나씩 복사할 수도 있어요.</div></div>
+      <div class="hint" style="margin-top:12px"><b>다른 사이트에서 만들 때</b> ① <a href="#" onclick="copyAllPrompts();return false">전체 프롬프트 복사</a> → ② 원하는 사이트에서 그림 생성 → ③ 장면 카드에 끌어다 놓기 또는 [교체]. 카드의 ✎로 프롬프트를 하나씩 복사할 수도 있어요. 여러 장을 한 번에 끌어다 놓으면 이름 순서대로 차례로 들어가요.</div></div>
+    ${helperPanel()}
     <div class="igrid">${sb.scenes.map((sc, i) => `<div class="icard">
       <div class="media" data-i="${i}" style="${sc.image && !sc.video ? `background-image:url('${fileUrl(sc.image)}')` : ""}">${sc.video ? `<video src="${fileUrl(sc.video)}" muted loop onmouseenter="this.play()" onmouseleave="this.pause()"></video>` : sc.image ? "" : "여기에 그림·영상을 끌어다 놓기"}
         <span class="num">${i + 1}${sc.video ? " · 영상" : ""}</span></div>
       <div class="bd"><p title="${esc(sc.visual)}">${esc(sc.visual || sc.prompt)}</p>
         <div class="row" style="gap:2px"><button class="link sm" onclick="runStep('images',{only:[${i}],provider:'${prov}'})">${sc.image ? "재생성" : "만들기"}</button>
-        <button class="link sm" onclick="pickFile(${i})">교체</button><button class="link sm" title="프롬프트 복사" onclick="copyPrompt(${i})">✎</button><span class="grow"></span>
+        <button class="link sm" onclick="pickFile(${i})">교체</button><button class="link sm" title="도우미가 다음 그림을 이 장면에 넣어요" onclick="helperTarget(${i})">여기 받기</button><button class="link sm" title="프롬프트 복사" onclick="copyPrompt(${i})">✎</button><span class="grow"></span>
         ${sc.video ? `<button class="link sm" style="color:var(--bad)" onclick="sceneAct(${i},'clear_media',{what:'video'})">영상 빼기</button>` : sc.image ? `<button class="link sm" style="color:var(--bad)" onclick="sceneAct(${i},'clear_media',{what:'image'})">지우기</button>` : ""}</div></div></div>`).join("")}</div>
     <input type="file" id="i_file" hidden accept="image/*,video/*">` + nextBtn("image");
   document.querySelectorAll(".icard .media").forEach(m => {
     m.ondragover = e => { e.preventDefault(); m.classList.add("drag"); };
     m.ondragleave = () => m.classList.remove("drag");
-    m.ondrop = async e => { e.preventDefault(); m.classList.remove("drag"); const f = e.dataTransfer.files[0]; if (f) await putScene(+m.dataset.i, f); };
+    m.ondrop = async e => {
+      e.preventDefault(); m.classList.remove("drag");
+      const files = [...e.dataTransfer.files].sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true}));
+      if (files.length <= 1) { if (files[0]) await putScene(+m.dataset.i, files[0]); return; }
+      // 여러 장을 한꺼번에 놓으면 이름 순서대로 이 장면부터 차례로 넣는다
+      const n = state.p.storyboard.scenes.length;
+      if (!confirm(`${files.length}장을 장면 ${+m.dataset.i + 1}부터 차례로 넣을까요?`)) return;
+      try { for (let k = 0; k < files.length && +m.dataset.i + k < n; k++) await upload(files[k], {id: state.pid, kind: "scene", scene: +m.dataset.i + k, token: TOKEN}); } catch (er) { fail(er); }
+      await loadProject(); render();
+    };
   });
+  helperInit();
 }
+// ---------------- 반자동 그림 도우미 ----------------
+const HELPER_SITES = {gemini: ["Gemini", "https://gemini.google.com/app"], chatgpt: ["ChatGPT", "https://chatgpt.com/"], none: ["열지 않음", ""]};
+let helperPoll = null, helperSeen = 0;
+function helperPanel() {
+  const site = (() => { try { return localStorage.vwSite || "gemini"; } catch (e) { return "gemini"; } })();
+  return `<div class="panel" id="helper"><div class="row"><h2 class="grow" style="margin:0">무료 반자동 도우미 <span class="pill ok">키 필요 없음</span></h2>
+      <span class="tiny dim">사이트는 내가 직접 쓰고, 받은 그림은 앱이 알아서 장면에 넣어요</span></div>
+    <div class="row end" style="margin-top:10px">
+      <label class="field"><span>그림 사이트</span><select id="h_site" onchange="try{localStorage.vwSite=this.value}catch(e){}">${Object.entries(HELPER_SITES).map(([k, [n]]) => `<option value="${k}" ${k === site ? "selected" : ""}>${n}</option>`).join("")}</select></label>
+      <label class="field grow"><span>그림을 받는 폴더 (브라우저 다운로드 폴더)</span><input id="h_dir" placeholder="C:\\Users\\이름\\Downloads"></label>
+      <button id="h_toggle" onclick="helperToggle()">도우미 시작</button></div>
+    <div id="h_body" style="margin-top:12px"></div></div>`;
+}
+async function helperInit() {
+  const h = await api("/api/helper").catch(() => null);
+  if (!h || !$("#h_dir")) return;
+  $("#h_dir").value = h.dir;
+  helperSeen = h.added.length;
+  helperDraw(h);
+  if (h.on && h.pid === state.pid) helperWatch();
+}
+function helperDraw(h) {
+  const on = h.on && h.pid === state.pid;
+  $("#h_toggle").textContent = on ? "도우미 멈추기" : "도우미 시작";
+  $("#h_toggle").className = on ? "ghost" : "";
+  if (!on) {
+    $("#h_body").innerHTML = `<ol class="tiny dim" style="margin:0;padding-left:18px;line-height:1.9">
+      <li>[도우미 시작]을 누르고 <b>시작 지시문</b>을 그림 사이트에 한 번 보내요 (그림체·인물·가로 비율 고정).</li>
+      <li>[장면 프롬프트 복사]를 누르면 프롬프트가 복사되고 사이트가 열려요. 붙여 넣고 Enter.</li>
+      <li>그림이 나오면 <b>다운로드</b>만 누르세요. 앱이 받는 폴더를 지켜보다가 <b>자동으로 그 장면에 넣어요.</b></li>
+      <li>다음 장면도 같은 방법으로. 장면 순서는 아래 카드에서 바꿀 수 있어요.</li></ol>`;
+    return;
+  }
+  const scenes = state.p.storyboard.scenes;
+  const t = h.target;
+  const done = scenes.filter(s => s.image || s.video).length;
+  const last = h.added[h.added.length - 1];
+  $("#h_body").innerHTML = `
+    <div class="row" style="gap:8px"><button class="ghost" onclick="helperIntro()">① 시작 지시문 복사 (대화 처음 한 번)</button>
+      ${t === null || t === undefined ? `<span class="ok">모든 장면에 그림이 들어갔어요 🎉</span>` :
+        `<button onclick="helperCopy(${t})">② 장면 ${t + 1} 프롬프트 복사${HELPER_SITES[$("#h_site").value][1] ? " + 사이트 열기" : ""}</button>
+         <button class="link sm" onclick="helperSkip(${t})">이 장면 건너뛰기</button>`}
+      <span class="grow"></span><span class="pill ${done === scenes.length ? "ok" : "acc"}">${done}/${scenes.length}</span></div>
+    ${t !== null && t !== undefined ? `<div class="hint" style="margin-top:10px"><b>지금 받을 장면 ${t + 1}</b> · ${esc(scenes[t].visual || "")}<br><span class="tiny dim">🗣 ${esc(sceneText(scenes[t]).slice(0, 140))}</span><br>
+      <span class="tiny">받는 폴더를 지켜보는 중… 그림을 다운로드하면 장면 ${t + 1}에 자동으로 들어가요.</span></div>` : ""}
+    ${last ? `<div class="tiny ok" style="margin-top:6px">✓ ${esc(last.file)} → 장면 ${last.scene + 1}</div>` : ""}
+    ${h.error ? `<div class="tiny bad" style="margin-top:6px">${esc(h.error)}</div>` : ""}`;
+  document.querySelectorAll(".icard").forEach((c, i) => c.style.outline = i === t ? "2px solid var(--accent)" : "");
+}
+async function helperToggle() {
+  const h = await api("/api/helper");
+  try {
+    if (h.on && h.pid === state.pid) { await api("/api/helper/stop", {}); clearTimeout(helperPoll); helperPoll = null; }
+    else { await api("/api/helper/start", {id: state.pid, dir: $("#h_dir").value.trim()}); helperSeen = 0; helperWatch(); }
+  } catch (e) { return fail(e); }
+  helperDraw(await api("/api/helper"));
+}
+function helperWatch() {
+  clearTimeout(helperPoll);
+  const tick = async () => {
+    if (state.view !== "image" || !$("#helper")) { helperPoll = null; return; }
+    const h = await api("/api/helper").catch(() => null);
+    if (h) {
+      if (h.added.length !== helperSeen) { helperSeen = h.added.length; await loadProject(); viewImage(); return; }
+      helperDraw(h);
+      if (!h.on) { helperPoll = null; return; }
+    }
+    helperPoll = setTimeout(tick, 1500);
+  };
+  tick();
+}
+function openSite() { const u = HELPER_SITES[$("#h_site").value][1]; if (u) window.open(u, "vw_imagesite"); }
+async function helperIntro() { const {prompt} = await api(`/api/prompt?id=${state.pid}&step=helper_intro`); copy(prompt); openSite(); }
+async function helperCopy(i) { const {prompt} = await api(`/api/prompt?id=${state.pid}&step=scene:${i}`); copy(prompt); openSite(); }
+async function helperSkip(i) {
+  const n = state.p.storyboard.scenes.length;
+  let k = (i + 1) % n;
+  for (let c = 0; c < n; c++, k = (k + 1) % n) { const s = state.p.storyboard.scenes[k]; if (!s.image && !s.video && k !== i) break; }
+  await api("/api/helper/target", {target: k === i ? null : k}); helperDraw(await api("/api/helper"));
+}
+async function helperTarget(i) { await api("/api/helper/target", {target: i}); helperDraw(await api("/api/helper")); }
+
 async function setImgProv(v) { await save({image_provider: v}, true); viewImage(); }
 function pickFile(i) { const inp = $("#i_file"); inp.onchange = () => inp.files[0] && putScene(i, inp.files[0]); inp.value = ""; inp.click(); }
 async function putScene(i, f) { try { toast("올리는 중…"); await upload(f, {id: state.pid, kind: "scene", scene: i, token: TOKEN}); await loadProject(); render(); } catch (e) { fail(e); } }

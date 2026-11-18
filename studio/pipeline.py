@@ -454,11 +454,35 @@ def run_images(p, cfg, ctx, folder, only=None, provider=None, overwrite=False):
         raise ai.AiError(f"{len(errors)}개 실패 (나머지는 저장됨). " + " / ".join(errors[:3]))
 
 
+def _aspect_word(p):
+    w, h = _res(p)
+    return "Wide 16:9 landscape image." if w >= h else "Tall 9:16 portrait image."
+
+
 def all_prompts_text(p):
     lines = []
     for i, s in enumerate(p["storyboard"]["scenes"]):
-        lines.append(f"[장면 {i + 1}] {s.get('visual', '')}\n{image_prompt(p, s)}\n")
+        lines.append(f"[장면 {i + 1}] {s.get('visual', '')}\n{image_prompt(p, s)} {_aspect_word(p)}\n")
     return "\n".join(lines)
+
+
+def helper_intro(p):
+    """반자동 도우미: 그림 채팅 대화를 시작할 때 한 번 보내는 지시문 (그림체·인물·비율 고정)."""
+    char = p["style"].get("character", "").strip()
+    text = (f"지금부터 유튜브 영상에 쓸 그림을 장면마다 한 장씩 부탁할게요. 이 대화의 모든 그림은 아래 조건을 똑같이 지켜 주세요.\n"
+            f"- 그림체: {style_prompt(p)}\n"
+            f"- 비율: {'가로 16:9' if _res(p)[0] >= _res(p)[1] else '세로 9:16'}\n")
+    if char:
+        text += f"- 반복해서 나오는 인물(외형을 항상 똑같이): {char}\n"
+    text += ("- 그림 안에 글자는 짧은 한글만 써 주세요.\n" if p["style"].get("allow_text")
+             else "- 그림 안에 글자, 자막, 워터마크를 넣지 마세요.\n")
+    text += "이해했으면 '준비됐어요'라고만 답해 주세요. 그다음부터 장면 설명을 보내면 그림만 그려 주세요."
+    return text
+
+
+def helper_scene_prompt(p, i):
+    sc = p["storyboard"]["scenes"][i]
+    return f"장면 {i + 1}: {sc.get('visual', '')}\n{sc.get('prompt') or ''}\n(같은 그림체, {'가로 16:9' if _res(p)[0] >= _res(p)[1] else '세로 9:16'}로 그려 주세요)"
 
 
 # ---------------- 6. 영상 ----------------

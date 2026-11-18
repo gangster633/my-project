@@ -34,7 +34,7 @@ import prompts  # noqa: E402
 import render  # noqa: E402
 
 APP_NAME = "AI 영상 공방"
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 DATA_DIR = Path(os.environ.get("VIDEO_WORKSHOP_HOME") or (Path(os.environ.get("APPDATA", Path.home())) / "VideoWorkshop"))
 PROJECTS = DATA_DIR / "projects"
 CONFIG = DATA_DIR / "config.json"
@@ -222,6 +222,84 @@ def _run_step(p, cfg, ctx, folder, s, opts):
         p["outputs"]["package"] = {"file": "out/edit_package.zip", "made": time.strftime("%Y-%m-%d %H:%M")}
 
 
+# ---------------- 반자동 그림 도우미 ----------------
+# 무료 그림 사이트(Gemini 앱 등)에서 사람이 직접 그림을 받으면, 다운로드 폴더를 지켜보다가 다음 빈 장면에 넣는다.
+# 사이트를 자동 조작하지 않으므로 약관 문제나 계정 위험이 없다.
+
+IMG_EXT = (".png", ".jpg", ".jpeg", ".webp")
+helper = {"on": False, "pid": None, "dir": "", "since": 0.0, "target": None, "added": [], "error": None}
+helper_lock = threading.Lock()
+
+
+def default_downloads():
+    home = Path.home()
+    for d in (home / "Downloads", home / "다운로드"):
+        if d.exists():
+            return str(d)
+    return str(home / "Downloads")
+
+
+def next_empty(p, after=-1):
+    scenes = p["storyboard"]["scenes"]
+    order = list(range(after + 1, len(scenes))) + list(range(0, after + 1))
+    return next((i for i in order if not scenes[i].get("image") and not scenes[i].get("video")), None)
+
+
+def helper_loop():
+    seen = {}
+    while True:
+        time.sleep(1.0)
+        with helper_lock:
+            if not helper["on"]:
+                seen.clear()
+                continue
+            d, since, pid = Path(helper["dir"]), helper["since"], helper["pid"]
+        try:
+            files = [f for f in d.iterdir() if f.is_file() and f.suffix.lower() in IMG_EXT and f.stat().st_mtime >= since]
+        except OSError as e:
+            with helper_lock:
+                helper["error"] = f"폴더를 읽지 못했습니다: {e}"
+            continue
+        for f in sorted(files, key=lambda x: x.stat().st_mtime):
+            size = f.stat().st_size
+            if seen.get(str(f)) == "done":
+                continue
+            if seen.get(str(f)) != size:  # 다운로드가 끝나 크기가 멈출 때까지 한 번 기다린다
+                seen[str(f)] = size
+                continue
+            seen[str(f)] = "done"
+            try:
+                with store_lock:
+                    p = load_project(pid)
+                    with helper_lock:
+                        target = helper["target"]
+                    if target is None or target >= len(p["storyboard"]["scenes"]):
+                        target = next_empty(p)
+                    if target is None:
+                        with helper_lock:
+                            helper["error"] = "빈 장면이 없어요. 모든 장면에 그림이 들어갔어요."
+                        continue
+                    folder = pdir(pid)
+                    (folder / "uploads").mkdir(exist_ok=True)
+                    dst = folder / "uploads" / f"scene_{target:03d}_{int(time.time() * 1000) % 10_000_000}{f.suffix.lower()}"
+                    shutil.copy2(f, dst)
+                    sc = p["storyboard"]["scenes"][target]
+                    sc["image"] = f"uploads/{dst.name}"
+                    sc["image_prompt_used"] = "도우미로 받음"
+                    save_project(p)
+                    nxt = next_empty(p, target)
+                with helper_lock:
+                    helper["added"].append({"scene": target, "file": f.name, "at": time.time()})
+                    helper["target"] = nxt
+                    helper["error"] = None
+            except (OSError, ValueError, KeyError) as e:
+                with helper_lock:
+                    helper["error"] = f"그림을 넣지 못했습니다: {e}"
+
+
+threading.Thread(target=helper_loop, daemon=True).start()
+
+
 # ---------------- 웹 서버 ----------------
 
 class Handler(BaseHTTPRequestHandler):
@@ -349,6 +427,12 @@ class Handler(BaseHTTPRequestHandler):
                                              "scene_times": pipeline.scene_times(p) if p.get("audio") and p.get("storyboard") else [],
                                              "chapters": [[pipeline.fmt_time(t), n] for t, n in pipeline.chapters(p)],
                                              "description": pipeline.full_description(p)})
+        if path == "/api/helper":
+            with helper_lock:
+                h = dict(helper, added=list(helper["added"][-30:]))
+            if not h["dir"]:
+                h["dir"] = load_config().get("helper_dir") or default_downloads()
+            return self.send(HTTPStatus.OK, h)
         if path == "/api/job":
             with job_lock:
                 return self.send(HTTPStatus.OK, dict(job))
@@ -370,6 +454,10 @@ class Handler(BaseHTTPRequestHandler):
                 text = pipeline.meta_prompt(p)
             elif step == "images":
                 text = pipeline.all_prompts_text(p)
+            elif step == "helper_intro":
+                text = pipeline.helper_intro(p)
+            elif step.startswith("scene:"):
+                text = pipeline.helper_scene_prompt(p, int(step.split(":")[1]))
             elif step.startswith("style:"):
                 text = prompts.style_sample_prompt(step.split(":", 1)[1])
             else:
@@ -645,6 +733,28 @@ class Handler(BaseHTTPRequestHandler):
                         sc["last"] = mid
                         scenes.insert(i + 1, new)
                 save_project(p)
+            return self.send(HTTPStatus.OK, {"ok": True})
+        if path == "/api/helper/start":
+            d_ = Path(str(d.get("dir") or default_downloads())).expanduser()
+            if not d_.is_dir():
+                raise ValueError(f"폴더가 없습니다: {d_}")
+            p = load_project(d["id"])
+            if not p.get("storyboard"):
+                raise ValueError("스토리보드를 먼저 만들어 주세요.")
+            cfg = load_config()
+            cfg["helper_dir"] = str(d_)
+            save_config(cfg)
+            with helper_lock:
+                helper.update(on=True, pid=d["id"], dir=str(d_), since=time.time() - 2, added=[], error=None,
+                              target=d.get("target") if d.get("target") is not None else next_empty(p))
+            return self.send(HTTPStatus.OK, {"ok": True})
+        if path == "/api/helper/target":
+            with helper_lock:
+                helper["target"] = d.get("target")
+            return self.send(HTTPStatus.OK, {"ok": True})
+        if path == "/api/helper/stop":
+            with helper_lock:
+                helper["on"] = False
             return self.send(HTTPStatus.OK, {"ok": True})
         if path == "/api/open_folder":
             target = pdir(d["id"]) / (d.get("sub") or "")
