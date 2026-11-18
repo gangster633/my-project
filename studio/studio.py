@@ -34,7 +34,7 @@ import prompts  # noqa: E402
 import render  # noqa: E402
 
 APP_NAME = "AI 영상 공방"
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 DATA_DIR = Path(os.environ.get("VIDEO_WORKSHOP_HOME") or (Path(os.environ.get("APPDATA", Path.home())) / "VideoWorkshop"))
 PROJECTS = DATA_DIR / "projects"
 CONFIG = DATA_DIR / "config.json"
@@ -156,15 +156,18 @@ def _run_job(pid, step, opts):
     try:
         steps = [step]
         if step == "auto":
-            steps = [s for s in ("script", "voice", "storyboard", "images", "meta", "render", "thumbs", "shorts")
-                     if s in opts.get("steps", ["script", "voice", "storyboard", "images", "meta", "render", "thumbs", "shorts"])]
+            order = ("script", "factcheck", "voice", "storyboard", "images", "meta", "render", "thumbs", "shorts")
+            steps = [s for s in order if s in opts.get("steps", order)]
             if p.get("script"):
-                steps = [s for s in steps if s != "script"]
+                steps = [s for s in steps if s not in ("script", "factcheck")]
         for s in steps:
             ctx.check()
             if step == "auto":
                 set_job(message=f"[{STEP_NAMES[s]}] 시작", done=0, total=0)
             _run_step(p, cfg, ctx, folder, s, opts)
+            if step == "auto" and s == "factcheck":
+                n = pipeline.apply_factcheck(p)  # 자동 제작에서는 제안된 수정을 바로 반영
+                set_job(message=f"사실 대조: {n}곳 고침")
             save_project(p)
         save_config(cfg)
         set_job(running=False, message="완료", finished=time.time())
@@ -488,6 +491,8 @@ class Handler(BaseHTTPRequestHandler):
             p = pipeline.new_project(d.get("name", ""), d.get("category") or cfg.get("default_category") or "경제")
             if cfg.get("last_voice"):
                 p["voice"].update(cfg["last_voice"])
+            if cfg.get("last_style"):
+                p["style"].update(cfg["last_style"])
             if cfg.get("last_sub"):
                 p["sub"].update(cfg["last_sub"])
             if cfg.get("last_video"):
@@ -520,12 +525,13 @@ class Handler(BaseHTTPRequestHandler):
                     from textutil import check_script
                     p["checks"] = check_script(p["script"], pipeline.chars_for(p, load_config()))
                 save_project(p)
-            if any(k in d.get("fields", {}) for k in ("voice", "sub", "video")):
+            if any(k in d.get("fields", {}) for k in ("voice", "sub", "video", "style")):
                 cfg = load_config()  # 다음 새 프로젝트의 기본값으로 기억
                 cfg["last_voice"] = {k: p["voice"][k] for k in p["voice"] if k != "dictionary"}
                 cfg["last_voice"]["dictionary"] = p["voice"].get("dictionary", "")
                 cfg["last_sub"] = p["sub"]
                 cfg["last_video"] = p["video"]
+                cfg["last_style"] = {k: p["style"].get(k) for k in ("id", "custom", "scene_seconds", "chosen")}
                 cfg["last_assets"] = {k: str(pdir(p["id"]) / p["video"][k]) for k in ("logo", "bgm") if p["video"].get(k)}
                 save_config(cfg)
             return self.send(HTTPStatus.OK, {"ok": True})

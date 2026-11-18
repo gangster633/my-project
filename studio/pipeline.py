@@ -165,6 +165,20 @@ def run_factcheck(p, cfg, ctx):
     set_factcheck(p, ai.generate_text(cfg, factcheck_prompt(p), schema=prompts.FACT_SCHEMA, max_tokens=16000))
 
 
+def apply_factcheck(p):
+    """사실 대조에서 제안한 고친 문장을 대본에 반영하고, 반영한 개수를 돌려준다."""
+    n, left = 0, []
+    for f in p.get("factcheck") or []:
+        q, fix = (f.get("quote") or "").strip(), (f.get("fix") or "").strip()
+        if q and fix and q in p["script"]:
+            p["script"] = p["script"].replace(q, fix, 1)
+            n += 1
+        else:
+            left.append(f)
+    p["factcheck"] = left
+    return n
+
+
 def run_translate(p, cfg, ctx, lang):
     ctx.report(message=f"{prompts.LANG_NAME.get(lang, lang)} 번역 중", done=0, total=1)
     p["translations"][lang] = prompts.parse_script(ai.generate_text(cfg, prompts.build_translate(p["script"], lang)))
@@ -365,7 +379,8 @@ def image_prompt(p, scene):
 
 
 def run_images(p, cfg, ctx, folder, only=None, provider=None, overwrite=False):
-    prov = provider or p.get("image_provider") or cfg.get("image_provider") or "placeholder"
+    prov = (provider or p.get("image_provider") or cfg.get("image_provider")
+            or ("gemini" if cfg.get("gemini_key") else "openai" if cfg.get("openai_key") else "placeholder"))
     scenes = p["storyboard"]["scenes"]
     idxs = [i for i in (only if only is not None else range(len(scenes))) if overwrite or only is not None or not scenes[i].get("image")]
     idir = Path(folder) / "images"

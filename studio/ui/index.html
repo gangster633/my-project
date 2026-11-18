@@ -352,7 +352,7 @@ async function viewHome() {
         <label class="field"><span>채널 성격</span><select id="n_cat">${c.categories.map(x => `<option ${x === (c.settings.default_category || "경제") ? "selected" : ""}>${esc(x)}</option>`).join("")}</select></label>
         <label class="field"><span>분량</span><select id="n_min">${[1, 3, 5, 8, 10, 15, 20, 30].map(m => `<option value="${m}" ${m === 10 ? "selected" : ""}>${m}분</option>`).join("")}</select></label>
         <div class="grow"></div>
-        <label class="row tiny dim" title="키가 있어야 해요"><input type="checkbox" id="n_auto"> 원클릭 자동 제작 (대본→음성→그림→영상→쇼츠·썸네일)</label>
+        <label class="row tiny dim" title="키가 있어야 해요"><input type="checkbox" id="n_auto"> 원클릭 자동 제작 (대본→사실 대조→음성→그림→영상→쇼츠·썸네일)</label>
         <button onclick="newProject()">영상 만들기 시작</button>
       </div>
     </div>
