@@ -472,14 +472,23 @@ def final_render(workdir, clips, scene_times, transitions, narration, out, w, h,
         fc.append(f"[{nidx}:a]aformat=sample_rates=44100:channel_layouts=stereo,loudnorm=I=-14:TP=-1.5:LRA=11[aout]")
     script = Path(workdir) / "filter.txt"
     script.write_text(";\n".join(fc), encoding="utf-8")
-    args += (["-/filter_complex", "filter.txt"] if ffmpeg_major() >= 7 else ["-filter_complex_script", "filter.txt"])
+    new_style = ffmpeg_major() >= 7
+    args += (["-/filter_complex", "filter.txt"] if new_style else ["-filter_complex_script", "filter.txt"])
     args += ["-map", "[vout]", "-map", "[aout]",
              "-c:v", "libx264", "-preset", "fast", "-crf", "20", "-r", str(fps), "-pix_fmt", "yuv420p",
              "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart"]
     if total:
         args += ["-t", f"{total:.3f}"]
     args.append(out)
-    run(args, cwd=workdir, progress=progress)
+    try:
+        run(args, cwd=workdir, progress=progress)
+    except RenderError as e:
+        # 버전 판단이 틀렸을 때를 대비해 반대 방식으로 한 번 더 시도한다
+        if "Unrecognized option" not in str(e) and "Option not found" not in str(e):
+            raise
+        i = args.index("-/filter_complex" if new_style else "-filter_complex_script")
+        args[i] = "-filter_complex_script" if new_style else "-/filter_complex"
+        run(args, cwd=workdir, progress=progress)
 
 
 # ---------------- 썸네일 ----------------

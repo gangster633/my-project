@@ -34,7 +34,7 @@ import prompts  # noqa: E402
 import render  # noqa: E402
 
 APP_NAME = "AI 영상 공방"
-VERSION = "1.3.2"
+VERSION = "1.3.3"
 DATA_DIR = Path(os.environ.get("VIDEO_WORKSHOP_HOME") or (Path(os.environ.get("APPDATA", Path.home())) / "VideoWorkshop"))
 PROJECTS = DATA_DIR / "projects"
 CONFIG = DATA_DIR / "config.json"
@@ -393,7 +393,7 @@ class Handler(BaseHTTPRequestHandler):
     def route_get(self, path, q):
         one = lambda k, d="": (q.get(k) or [d])[0]  # noqa: E731
         if path == "/api/ping":
-            return self.send(HTTPStatus.OK, {"ok": True, "app": APP_NAME})
+            return self.send(HTTPStatus.OK, {"ok": True, "app": APP_NAME, "version": VERSION})
         if path.startswith("/files/"):
             parts = unquote(path[len("/files/"):]).split("/", 1)
             if parts[0] == "_preview":
@@ -781,9 +781,21 @@ def already_running():
         info = json.loads(RUNNING.read_text(encoding="utf-8"))
         req = urllib.request.Request(info["url"] + "api/ping", headers={"X-Token": info["token"]})
         with urllib.request.urlopen(req, timeout=2) as res:
-            if json.load(res).get("app") == APP_NAME:
-                webbrowser.open(info["url"])
-                return True
+            r = json.load(res)
+        if r.get("app") != APP_NAME:
+            return False
+        if r.get("version") == VERSION:
+            webbrowser.open(info["url"])
+            return True
+        # 다른 버전이 켜져 있으면 끄고 새 버전으로 시작한다 (새 폴더를 풀어도 옛 버전이 계속 열리던 문제)
+        q = urllib.request.Request(info["url"] + "api/quit", data=b"{}", method="POST",
+                                   headers={"X-Token": info["token"], "Content-Type": "application/json"})
+        try:
+            urllib.request.urlopen(q, timeout=3).read()
+        except Exception:
+            pass
+        time.sleep(1.5)
+        return False
     except Exception:
         pass
     return False
