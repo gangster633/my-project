@@ -28,7 +28,7 @@ jobs:
         run: |
           cd studio
           python -c "import studio, pipeline, render, ai, prompts, textutil; print('ok')"
-          python -c "import textutil as t; assert t.read_numbers('86주') == '팔십육주'; assert t.read_numbers('3명') == '세명'"
+          python -c "import textutil as t; assert t.read_numbers('86주') == '팔십육 주'; assert t.read_numbers('3명') == '세 명'; assert t.read_numbers('1만 원') == '만 원'"
       - name: 윈도우 zip 만들기
         run: python studio/build_windows.py
       - uses: actions/upload-artifact@v4

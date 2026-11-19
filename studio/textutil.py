@@ -160,6 +160,11 @@ def read_numbers(text):
             return spoken + " 퍼센트"
         if tail.startswith("월") and num in ("6", "10"):
             spoken = {"6": "유", "10": "시"}[num]
+        if num == "1" and tail[:1] in ("만", "천", "백", "십"):  # 1만 -> 만, 1천만 -> 천만
+            spoken = ""
+        # 큰 단위(만·억·천)와 '여'는 붙이고, 나머지 단위(곳·원·명 등)는 띄워 읽어야 자연스럽다
+        if tail and not sp and tail[:1] not in ("만", "억", "조", "천", "백", "십", "여", "월", "일"):
+            sp = " "
         return spoken + sp + tail
     return _NUM.sub(rep, text)
 
