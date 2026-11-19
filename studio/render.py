@@ -34,6 +34,22 @@ def tool(name):
     return found
 
 
+_major = []
+
+
+def ffmpeg_major():
+    """ffmpeg 주 버전. 7 부터 -filter_complex_script 대신 -/filter_complex 를 쓴다 (8 이상에서는 옛 옵션이 없다)."""
+    if not _major:
+        try:
+            out = subprocess.run([tool("ffmpeg"), "-hide_banner", "-version"], capture_output=True, text=True,
+                                 creationflags=NOWIN).stdout
+            m = re.match(r"ffmpeg version n?(\d+)\.", out)
+            _major.append(int(m.group(1)) if m else 99)  # 개발판(N-xxxx)은 최신으로 본다
+        except (OSError, RenderError):
+            _major.append(99)
+    return _major[0]
+
+
 def ffmpeg_ok():
     try:
         tool("ffmpeg")
@@ -456,7 +472,8 @@ def final_render(workdir, clips, scene_times, transitions, narration, out, w, h,
         fc.append(f"[{nidx}:a]aformat=sample_rates=44100:channel_layouts=stereo,loudnorm=I=-14:TP=-1.5:LRA=11[aout]")
     script = Path(workdir) / "filter.txt"
     script.write_text(";\n".join(fc), encoding="utf-8")
-    args += ["-filter_complex_script", "filter.txt", "-map", "[vout]", "-map", "[aout]",
+    args += (["-/filter_complex", "filter.txt"] if ffmpeg_major() >= 7 else ["-filter_complex_script", "filter.txt"])
+    args += ["-map", "[vout]", "-map", "[aout]",
              "-c:v", "libx264", "-preset", "fast", "-crf", "20", "-r", str(fps), "-pix_fmt", "yuv420p",
              "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart"]
     if total:

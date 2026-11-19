@@ -34,7 +34,7 @@ import prompts  # noqa: E402
 import render  # noqa: E402
 
 APP_NAME = "AI 영상 공방"
-VERSION = "1.3.1"
+VERSION = "1.3.2"
 DATA_DIR = Path(os.environ.get("VIDEO_WORKSHOP_HOME") or (Path(os.environ.get("APPDATA", Path.home())) / "VideoWorkshop"))
 PROJECTS = DATA_DIR / "projects"
 CONFIG = DATA_DIR / "config.json"
@@ -167,6 +167,8 @@ def _run_job(pid, step, opts):
             if step == "auto":
                 set_job(message=f"[{STEP_NAMES[s]}] 시작", done=0, total=0)
             _run_step(p, cfg, ctx, folder, s, opts)
+            if s in ("render", "shorts"):
+                p.pop("last_error", None)
             if step == "auto" and s == "factcheck":
                 n = pipeline.apply_factcheck(p)  # 자동 제작에서는 제안된 수정을 바로 반영
                 set_job(message=f"사실 대조: {n}곳 고침")
@@ -177,10 +179,12 @@ def _run_job(pid, step, opts):
         save_project(p)
         set_job(running=False, message="취소됨", finished=time.time())
     except (ai.AiError, render.RenderError, ValueError, OSError) as e:
+        p["last_error"] = {"step": STEP_NAMES.get(step, step), "message": str(e), "at": time.strftime("%Y-%m-%d %H:%M")}
         save_project(p)
         set_job(running=False, error=str(e), message="실패", finished=time.time())
     except Exception as e:  # 예상 못 한 오류도 화면에 보여 준다
         traceback.print_exc()
+        p["last_error"] = {"step": STEP_NAMES.get(step, step), "message": f"{type(e).__name__}: {e}", "at": time.strftime("%Y-%m-%d %H:%M")}
         save_project(p)
         set_job(running=False, error=f"{type(e).__name__}: {e}", message="실패", finished=time.time())
 

@@ -273,7 +273,9 @@ async function save(fields, quiet) {
 }
 function header(k, desc) {
   const i = STEPS.findIndex(s => s[0] === k);
-  return `<div class="crumb"><a href="#" onclick="go('home');return false">모든 프로젝트</a> / ${esc(state.p.name)} · ${i + 1}/7</div><h1>${STEPS[i][2]}</h1><p class="lead">${desc}</p>`;
+  const le = state.p.last_error;
+  const errBox = le ? `<div class="notice" style="background:#3b1111;color:#fecaca">⚠ 마지막 작업(${esc(le.step)})이 실패했어요 · ${esc(le.at)}<br><span class="tiny" style="word-break:break-all">${esc(le.message).slice(0, 600)}</span><br><span class="tiny">이 문구를 캡처해서 알려 주시면 원인을 찾을 수 있어요.</span></div>` : "";
+  return errBox + `<div class="crumb"><a href="#" onclick="go('home');return false">모든 프로젝트</a> / ${esc(state.p.name)} · ${i + 1}/7</div><h1>${STEPS[i][2]}</h1><p class="lead">${desc}</p>`;
 }
 function nextBtn(k) {
   const i = STEPS.findIndex(s => s[0] === k);
