@@ -235,6 +235,8 @@ def run_voice(p, cfg, ctx, folder, lang="ko", voice=None):
     else:
         done = [total - len(jobs)]
         workers = int(cfg.get("tts_workers") or 4)
+        if prov == "azure":  # 무료 등급(F0)은 동시 요청이 적어 2개로 제한
+            workers = min(workers, 2)
 
         def work(i):
             ctx.check()

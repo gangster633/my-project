@@ -34,7 +34,7 @@ import prompts  # noqa: E402
 import render  # noqa: E402
 
 APP_NAME = "AI 영상 공방"
-VERSION = "1.2.0"
+VERSION = "1.3.0"
 DATA_DIR = Path(os.environ.get("VIDEO_WORKSHOP_HOME") or (Path(os.environ.get("APPDATA", Path.home())) / "VideoWorkshop"))
 PROJECTS = DATA_DIR / "projects"
 CONFIG = DATA_DIR / "config.json"
@@ -46,10 +46,10 @@ pipeline.STYLE_DIR = STYLE_DIR
 TOKEN = secrets.token_urlsafe(24)
 last_ping = [time.time()]
 IDLE_EXIT = 180
-KEY_FIELDS = ["anthropic_key", "openai_key", "gemini_key", "elevenlabs_key"]
+KEY_FIELDS = ["anthropic_key", "openai_key", "gemini_key", "elevenlabs_key", "azure_speech_key"]
 SETTING_FIELDS = ["text_provider", "claude_model", "claude_effort", "openai_text_model", "gemini_text_model",
                   "image_provider", "gemini_image_model", "openai_image_model", "openai_image_quality",
-                  "gemini_tts_model", "openai_tts_model", "elevenlabs_model", "tts_workers", "image_workers",
+                  "gemini_tts_model", "openai_tts_model", "elevenlabs_model", "azure_region", "tts_workers", "image_workers",
                   "default_category", "categories_custom"]
 store_lock = threading.RLock()
 
@@ -591,6 +591,12 @@ class Handler(BaseHTTPRequestHandler):
                     res["elevenlabs_key"] = "정상"
                 except ai.AiError as e:
                     res["elevenlabs_key"] = f"실패: {e}"
+            if cfg.get("azure_speech_key"):
+                try:
+                    ai._azure_cache.clear()
+                    res["azure_speech_key"] = f"정상 (한국어 음성 {len(ai.azure_voices(cfg))}개)"
+                except ai.AiError as e:
+                    res["azure_speech_key"] = f"실패: {e} (키와 지역이 맞는지 확인하세요)"
             return self.send(HTTPStatus.OK, res)
         if path == "/api/project/new":
             cfg = load_config()

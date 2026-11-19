@@ -523,7 +523,7 @@ const favs = () => { try { return JSON.parse(localStorage.vwFav || "[]"); } catc
 function toggleFav(key, ev) { ev.stopPropagation(); let f = favs(); f = f.includes(key) ? f.filter(x => x !== key) : [...f, key]; try { localStorage.vwFav = JSON.stringify(f); } catch (e) {} drawVoices(); }
 function drawVoices() {
   const vs = state.voices || [], f = favs();
-  const groups = {all: "전체", fav: "★ 즐겨찾기", free: "무료", sapi: "윈도우 기본", gemini: "Gemini", openai: "OpenAI", elevenlabs: "ElevenLabs"};
+  const groups = {all: "전체", fav: "★ 즐겨찾기", free: "무료", sapi: "윈도우 기본", azure: "Azure (무료 등급)", gemini: "Gemini", openai: "OpenAI", elevenlabs: "ElevenLabs"};
   const have = new Set(vs.map(v => v.provider));
   const tab = state.voiceTab = (state.voiceTab in groups ? state.voiceTab : "all");
   $("#vtabs").innerHTML = Object.entries(groups).filter(([k]) => ["all", "fav", "free"].includes(k) || have.has(k)).map(([k, n]) => `<button aria-selected="${k === tab}" onclick="state.voiceTab='${k}';drawVoices()">${n}</button>`).join("");
@@ -961,6 +961,8 @@ function viewSettings() {
       ${keyRow("gemini_key", "Google Gemini", "무료 사용량이 있어요. 글·음성·이미지 모두 가능.", "https://aistudio.google.com/apikey")}
       ${keyRow("openai_key", "OpenAI", "글·음성·이미지 가능.", "https://platform.openai.com/api-keys")}
       ${keyRow("elevenlabs_key", "ElevenLabs", "가장 자연스러운 음성 중 하나.", "https://elevenlabs.io/app/settings/api-keys")}
+      ${keyRow("azure_speech_key", "Azure 음성 (무료 등급 추천)", "사람 같은 한국어 음성 SunHi·InJoon 등. 무료 등급(F0)은 한 달 50만 자.", "https://portal.azure.com/#create/Microsoft.CognitiveServicesSpeechServices")}
+      <label class="field"><span>Azure 지역 (음성 리소스를 만든 지역)</span><input id="azure_region" value="${esc(s.azure_region || "")}" placeholder="koreacentral"></label>
     </div><div class="row" style="margin-top:12px"><button onclick="saveKeys()">키 저장</button><button class="ghost" onclick="testKeys()">연결 테스트</button><span id="testres" class="tiny"></span></div></div>
     <div class="panel"><h2>어떤 AI를 쓸까요</h2><div class="grid3">
       <label class="field"><span>글 (대본·장면·제목)</span><select id="text_provider"><option value="claude">Claude</option><option value="gemini">Gemini</option><option value="openai">OpenAI</option><option value="manual">직접 붙여넣기 (키 없이)</option></select></label>
@@ -985,7 +987,8 @@ function viewSettings() {
 }
 async function saveKeys() {
   const body = {};
-  ["anthropic_key", "openai_key", "gemini_key", "elevenlabs_key"].forEach(k => { const v = $("#" + k).value.trim(); if (v) body[k] = v; });
+  if ($("#azure_region").value.trim()) body.azure_region = $("#azure_region").value.trim();
+  ["anthropic_key", "openai_key", "gemini_key", "elevenlabs_key", "azure_speech_key"].forEach(k => { const v = $("#" + k).value.trim(); if (v) body[k] = v; });
   await api("/api/config", body).catch(fail); state.cfg = await api("/api/config"); state.voices = null; viewSettings(); toast("키를 저장했어요");
 }
 async function clearKey(k) { await api("/api/config", {["clear_" + k]: true}); state.cfg = await api("/api/config"); state.voices = null; viewSettings(); }

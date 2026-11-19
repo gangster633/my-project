@@ -27,8 +27,10 @@ class AiError(Exception):
 
 # ---------------- HTTP ----------------
 
-def http_json(url, body=None, headers=None, timeout=300, retries=3, raw=False):
-    data = json.dumps(body).encode("utf-8") if body is not None else None
+def http_json(url, body=None, headers=None, timeout=300, retries=3, raw=False, data=None):
+    """data 를 주면 JSON 대신 그 바이트를 그대로 보낸다 (Azure SSML 등)."""
+    if data is None:
+        data = json.dumps(body).encode("utf-8") if body is not None else None
     hdrs = {"Content-Type": "application/json", "User-Agent": "VideoWorkshop"}
     hdrs.update(headers or {})
     last = None
@@ -177,6 +179,12 @@ def voice_catalog(cfg):
                 out.append({"provider": "elevenlabs", "id": v["voice_id"], "name": v.get("name", v["voice_id"]), "desc": desc, "free": False})
         except AiError as e:
             out.append({"provider": "elevenlabs", "id": "", "name": "ElevenLabs 목록 오류", "desc": str(e)[:80], "free": False})
+    if cfg.get("azure_speech_key"):
+        try:
+            for v in azure_voices(cfg):
+                out.append(v)
+        except AiError as e:
+            out.append({"provider": "azure", "id": "", "name": "Azure 목록 오류", "desc": str(e)[:80], "free": True})
     out.append({"provider": "silent", "id": "silent", "name": "테스트용 무음", "desc": "키 없이 흐름만 확인 (글자 수로 길이 계산)", "free": True})
     return out
 
@@ -265,7 +273,56 @@ def synth_one(cfg, provider, voice, text, out_base, speed=1.0, style=""):
         out = Path(str(out_base) + ".mp3")
         out.write_bytes(data)
         return out
+    if provider == "azure":
+        rate = round((max(0.5, min(2.0, speed)) - 1.0) * 100)
+        lang = "-".join(voice.split("-")[:2]) if voice.count("-") >= 2 else "ko-KR"
+        ssml = (f"<speak version='1.0' xml:lang='{lang}'><voice name='{xml_escape(voice)}'>"
+                f"<prosody rate='{rate:+d}%'>{xml_escape(text)}</prosody></voice></speak>")
+        data = http_json(f"https://{azure_region(cfg)}.tts.speech.microsoft.com/cognitiveservices/v1", None,
+                         {"Ocp-Apim-Subscription-Key": cfg.get("azure_speech_key", ""), "Content-Type": "application/ssml+xml",
+                          "X-Microsoft-OutputFormat": "riff-24khz-16bit-mono-pcm"},
+                         timeout=120, retries=6, raw=True, data=ssml.encode("utf-8"))
+        out = Path(str(out_base) + ".wav")
+        out.write_bytes(data)
+        return out
     raise AiError(f"알 수 없는 음성 제공자: {provider}")
+
+
+# ---------------- Azure 음성 (무료 등급: 한 달 50만 자) ----------------
+
+def xml_escape(s):
+    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("'", "&apos;").replace('"', "&quot;")
+
+
+def azure_region(cfg):
+    import re as _re
+    r = (cfg.get("azure_region") or "koreacentral").strip().lower().replace(" ", "")
+    if not _re.fullmatch(r"[a-z0-9]{3,30}", r):
+        raise AiError("Azure 지역 이름이 올바르지 않습니다. 예: koreacentral")
+    return r
+
+
+_azure_cache = {}
+
+
+def azure_voices(cfg):
+    """한국어 음성과 한국어도 읽는 다국어 음성 목록."""
+    key = (cfg.get("azure_speech_key"), azure_region(cfg))
+    if key not in _azure_cache:
+        r = http_json(f"https://{azure_region(cfg)}.tts.speech.microsoft.com/cognitiveservices/voices/list",
+                      headers={"Ocp-Apim-Subscription-Key": cfg["azure_speech_key"]}, timeout=20, retries=1)
+        out = []
+        for v in r:
+            locs = v.get("SecondaryLocaleList") or []
+            if v.get("Locale") != "ko-KR" and not ("Multilingual" in v.get("ShortName", "") and "ko-KR" in locs):
+                continue
+            gender = {"Female": "여성", "Male": "남성"}.get(v.get("Gender"), "")
+            kind = "한국어" if v.get("Locale") == "ko-KR" else "다국어"
+            out.append({"provider": "azure", "id": v["ShortName"], "name": v.get("LocalName") or v.get("DisplayName") or v["ShortName"],
+                        "desc": f"{gender} · {kind} · Azure 무료 등급 월 50만 자", "free": True})
+        out.sort(key=lambda x: ("다국어" in x["desc"], x["name"]))
+        _azure_cache[key] = out
+    return _azure_cache[key]
 
 
 # ---------------- 이미지 ----------------
