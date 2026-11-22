@@ -322,7 +322,9 @@ _NO_PEOPLE = re.compile(r"\b(no (one|people|person|humans?|figures?)|nobody|with
                         r"no people visible|unoccupied|deserted)\b", re.I)
 _PEOPLE = re.compile(r"\b(woman|women|man|men|person|people|she|he|her|his|him|they|husband|wife|couple|child|children|"
                      r"kids?|girl|boy|technician|worker|staff|hands?|fingers?|face|faces|character|family|crowd|customer|"
-                     r"elderly|grandmother|grandfather|mother|father|parents?|student|doctor|nurse|caregiver|driver|owner)\b", re.I)
+                     r"elderly|grandmother|grandfather|mother|father|parents?|student|doctor|nurse|caregiver|driver|owner|"
+                     r"vendors?|sellers?|merchants?|teller|cashier|clerk|farmers?|neighbou?rs?|villagers?|residents?|"
+                     r"volunteers?|delivery (person|man|driver)|passers?-?by|audience|employees?|officials?|elders?)\b", re.I)
 
 
 def scene_has_people(sc):

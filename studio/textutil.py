@@ -192,6 +192,10 @@ CLICKBAIT = ["충격", "경악", "소름", "미쳤", "역대급 폭락", "100%",
 INVEST = ["사세요", "파세요", "매수하세요", "매도하세요", "지금 사야", "지금 팔아야"]
 
 
+META_NOTE = re.compile(r"대본을 (쓸게요|써 ?드릴게요|작성하겠|쓰겠)|이제 이 내용으로|보강하겠습니다|보강할게요|분량이 (목표|조금)|"
+                       r"아래 대본|위 대본|다음 대본|요청하신|참고 자료를 바탕으로|규칙 점검|공백 제외 약|확인했어요\.?$|JSON")
+
+
 def check_script(script, target_chars=None):
     """규칙 기반 점검. [{level, title, detail}] 목록 (level: ok/warn/bad)."""
     issues = []
@@ -205,6 +209,10 @@ def check_script(script, target_chars=None):
     long_s = [s["text"] for s in sents if len(s["text"]) > 90]
     if long_s:
         issues.append({"level": "warn", "title": f"긴 문장 {len(long_s)}개", "detail": "듣기 편하도록 짧게 나누면 좋아요. 예: " + long_s[0][:60] + "…"})
+    # AI 채팅에서 답을 복사할 때 함께 딸려 온 작업 메모 (예: "이제 이 내용으로 대본을 쓸게요")
+    meta = [x["text"] for x in sents if META_NOTE.search(x["text"])]
+    if meta:
+        issues.append({"level": "bad", "title": "대본이 아닌 문장", "detail": f"AI의 설명 문장이 섞인 것 같아요. 지우고 저장해 주세요: “{meta[0][:50]}”"})
     hook = " ".join(s["text"] for s in sents[:3])
     if re.search(r"안녕하세요|여러분 반갑|오늘은 .{0,12}(알아보|이야기)", hook):
         issues.append({"level": "warn", "title": "도입부", "detail": "첫 3문장에 인사·예고만 있어요. 바로 궁금증을 주는 문장으로 시작하면 이탈이 줄어요."})
