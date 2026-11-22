@@ -6,6 +6,7 @@ import concurrent.futures as cf
 import hashlib
 import html
 import json
+import os
 import random
 import re
 import shutil
@@ -601,8 +602,8 @@ def run_render(p, cfg, ctx, folder, lang="ko", shorts=False):
     T = float(vcfg.get("trans_dur") or 0.5)
     trans = [_transition(p, k, scenes[i]) for k, (i, _, _) in enumerate(picked)]
     all_cut = all(t == "cut" for t in trans[1:])
-    clips, used = [], set()
-    ctx.report(message=f"장면 클립 만드는 중 (0/{len(picked)})", done=0, total=len(picked) + 1)
+    clips, used, todo = [], set(), []
+    ctx.report(message=f"장면 클립 준비 중 (0/{len(picked)})", done=0, total=len(picked) + 1)
     for k, (i, s, e) in enumerate(picked):
         ctx.check()
         sc = scenes[i]
@@ -625,10 +626,30 @@ def run_render(p, cfg, ctx, folder, lang="ko", shorts=False):
         name = f"c{i:03d}_{key}.mp4"
         used.add(name)
         if not (cdir / name).exists():  # 바뀐 장면만 다시 만든다
-            render.scene_clip(str(src), str(cdir / name), dur, motion, W, H, fps, is_video, vcfg.get("fill", "freeze"),
-                              vertical_blur=H > W, workdir=cdir, strength=float(vcfg.get("strength") or 0.12))
+            todo.append((str(src), name, dur, motion, is_video))
         clips.append(f"clips/{name}")
-        ctx.report(message=f"장면 클립 만드는 중 ({k + 1}/{len(picked)})", done=k + 1)
+    # 장면 클립은 화면 효과(zoompan)가 한 코어만 쓰므로 여러 개를 동시에 만든다
+    made = [len(picked) - len(todo)]
+    ctx.report(message=f"장면 클립 만드는 중 ({made[0]}/{len(picked)})", done=made[0])
+
+    def make_clip(job):
+        ctx.check()
+        src, name, dur, motion, is_video = job
+        render.scene_clip(src, str(cdir / name), dur, motion, W, H, fps, is_video, vcfg.get("fill", "freeze"),
+                          vertical_blur=H > W, workdir=cdir, strength=float(vcfg.get("strength") or 0.12))
+
+    workers = max(1, min(int(cfg.get("render_workers") or max(1, min(3, (os.cpu_count() or 2) // 2))), 6))
+    with cf.ThreadPoolExecutor(workers) as ex:
+        futs = [ex.submit(make_clip, j) for j in todo]
+        try:
+            for fu in cf.as_completed(futs):
+                fu.result()
+                made[0] += 1
+                ctx.report(message=f"장면 클립 만드는 중 ({made[0]}/{len(picked)})", done=made[0])
+        except BaseException:
+            for fu in futs:
+                fu.cancel()
+            raise
     for old in cdir.glob("*.mp4"):
         if old.name not in used:
             old.unlink()
@@ -662,16 +683,24 @@ def run_render(p, cfg, ctx, folder, lang="ko", shorts=False):
     out_dir.mkdir(exist_ok=True)
     stem = "shorts" if shorts else ("video" if lang == "ko" else f"video_{lang}")
     out_tmp = f"{stem}.tmp.mp4"
-    ctx.report(message="최종 영상 합치는 중 (0%)", done=len(picked), total=len(picked) + 1)
+    enc_name, enc_args, _ = render.pick_encoder(cfg.get("video_encoder") or "auto")
+    ctx.report(message=f"최종 영상 합치는 중 (0%, {enc_name})", done=len(picked), total=len(picked) + 1)
+    t0 = time.time()
 
     def prog(sec):
         ctx.check()
-        ctx.report(message=f"최종 영상 합치는 중 ({min(99, int(sec / max(total, 1) * 100))}%)")
+        frac = min(0.99, sec / max(total, 1))
+        left = ""
+        if frac > 0.03:  # 지금 속도로 남은 시간 어림
+            m = int((time.time() - t0) * (1 - frac) / frac / 60 + 0.5)
+            left = f", 약 {m}분 남음" if m >= 1 else ", 1분 안에 끝나요"
+        ctx.report(message=f"최종 영상 합치는 중 ({int(frac * 100)}%, {enc_name}{left})")
 
     render.final_render(work, clips, [(s, e) for _, s, e in picked], trans, "narration.wav", out_tmp, W, H, fps, T,
                         ass=ass, fontsdir="fonts" if ass else None, logo=logo,
                         logo_cfg={"scale": vcfg["logo_scale"], "x": vcfg["logo_x"], "y": vcfg["logo_y"], "opacity": vcfg["logo_opacity"]},
-                        bgm=bgm, bgm_cfg={"volume": vcfg["bgm_volume"], "duck": vcfg["bgm_duck"]}, total=total, progress=prog)
+                        bgm=bgm, bgm_cfg={"volume": vcfg["bgm_volume"], "duck": vcfg["bgm_duck"]}, total=total, progress=prog,
+                        encoder=enc_args)
     final = out_dir / f"{stem}.mp4"
     shutil.move(str(work / out_tmp), final)
     render.write_srt(out_dir / f"{stem}.srt", cues)

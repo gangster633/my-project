@@ -50,6 +50,39 @@ def ffmpeg_major():
     return _major[0]
 
 
+# ---------------- 영상 인코더 (그래픽카드 가속) ----------------
+
+# 그래픽카드 인코더는 CPU(x264)보다 5~10배 빠르다. 실제로 1프레임을 만들어 보고 되는 것만 쓴다.
+HW_ENCODERS = {
+    "nvenc": ("NVIDIA 그래픽카드", ["-c:v", "h264_nvenc", "-preset", "p4", "-rc", "vbr", "-cq", "21", "-b:v", "0", "-pix_fmt", "yuv420p"]),
+    "qsv": ("인텔 그래픽", ["-c:v", "h264_qsv", "-preset", "faster", "-global_quality", "22", "-pix_fmt", "nv12"]),
+    "amf": ("AMD 그래픽카드", ["-c:v", "h264_amf", "-quality", "speed", "-rc", "cqp", "-qp_i", "20", "-qp_p", "22", "-pix_fmt", "yuv420p"]),
+}
+CPU_ENCODER = ("CPU", ["-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p"])
+_hw = {}
+
+
+def _hw_works(key):
+    if key not in _hw:
+        try:
+            run(["-f", "lavfi", "-i", "color=c=gray:s=1280x720:r=30:d=0.2"] + HW_ENCODERS[key][1] + ["-f", "null", "-"], timeout=30)
+            _hw[key] = True
+        except (RenderError, OSError, subprocess.SubprocessError):
+            _hw[key] = False
+    return _hw[key]
+
+
+def pick_encoder(pref="auto"):
+    """(이름, ffmpeg 인자, 키). pref: auto(되는 그래픽카드 → CPU), cpu, nvenc, qsv, amf."""
+    if pref in HW_ENCODERS and _hw_works(pref):
+        return HW_ENCODERS[pref][0], HW_ENCODERS[pref][1], pref
+    if pref == "auto":
+        for k in HW_ENCODERS:
+            if _hw_works(k):
+                return HW_ENCODERS[k][0], HW_ENCODERS[k][1], k
+    return CPU_ENCODER[0], CPU_ENCODER[1], "cpu"
+
+
 def ffmpeg_ok():
     try:
         tool("ffmpeg")
@@ -409,7 +442,8 @@ def write_srt(path, cues):
 # ---------------- 최종 합성 ----------------
 
 def final_render(workdir, clips, scene_times, transitions, narration, out, w, h, fps=30, trans_dur=0.5,
-                 ass=None, fontsdir=None, logo=None, logo_cfg=None, bgm=None, bgm_cfg=None, total=None, progress=None):
+                 ass=None, fontsdir=None, logo=None, logo_cfg=None, bgm=None, bgm_cfg=None, total=None, progress=None,
+                 encoder=None):
     """clips: 장면 클립 상대경로(작업 폴더 기준). scene_times: [(start, end)] 장면 구간.
     transitions[i]: i번째 장면으로 들어오는 전환 이름('cut' 포함). 클립 i 는 앞뒤로 T/2 씩 여유가 있어야 한다(cut 은 0)."""
     n = len(clips)
@@ -474,21 +508,25 @@ def final_render(workdir, clips, scene_times, transitions, narration, out, w, h,
     script.write_text(";\n".join(fc), encoding="utf-8")
     new_style = ffmpeg_major() >= 7
     args += (["-/filter_complex", "filter.txt"] if new_style else ["-filter_complex_script", "filter.txt"])
-    args += ["-map", "[vout]", "-map", "[aout]",
-             "-c:v", "libx264", "-preset", "fast", "-crf", "20", "-r", str(fps), "-pix_fmt", "yuv420p",
-             "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart"]
+    venc = list(encoder or CPU_ENCODER[1])
+    tail = ["-r", str(fps), "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart"]
     if total:
-        args += ["-t", f"{total:.3f}"]
-    args.append(out)
+        tail += ["-t", f"{total:.3f}"]
+    tail.append(out)
+    head = args + ["-map", "[vout]", "-map", "[aout]"]
     try:
-        run(args, cwd=workdir, progress=progress)
+        run(head + venc + tail, cwd=workdir, progress=progress)
     except RenderError as e:
-        # 버전 판단이 틀렸을 때를 대비해 반대 방식으로 한 번 더 시도한다
-        if "Unrecognized option" not in str(e) and "Option not found" not in str(e):
+        if "Unrecognized option" in str(e) or "Option not found" in str(e):
+            # 버전 판단이 틀렸을 때를 대비해 반대 방식으로 한 번 더 시도한다
+            i = head.index("-/filter_complex" if new_style else "-filter_complex_script")
+            head[i] = "-filter_complex_script" if new_style else "-/filter_complex"
+            run(head + venc + tail, cwd=workdir, progress=progress)
+        elif venc != CPU_ENCODER[1]:
+            # 그래픽카드 인코더가 도중에 실패하면 CPU 로 다시 만든다
+            run(head + CPU_ENCODER[1] + tail, cwd=workdir, progress=progress)
+        else:
             raise
-        i = args.index("-/filter_complex" if new_style else "-filter_complex_script")
-        args[i] = "-filter_complex_script" if new_style else "-/filter_complex"
-        run(args, cwd=workdir, progress=progress)
 
 
 # ---------------- 썸네일 ----------------

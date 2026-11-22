@@ -34,7 +34,7 @@ import prompts  # noqa: E402
 import render  # noqa: E402
 
 APP_NAME = "AI 영상 공방"
-VERSION = "1.3.4"
+VERSION = "1.3.5"
 DATA_DIR = Path(os.environ.get("VIDEO_WORKSHOP_HOME") or (Path(os.environ.get("APPDATA", Path.home())) / "VideoWorkshop"))
 PROJECTS = DATA_DIR / "projects"
 CONFIG = DATA_DIR / "config.json"
@@ -49,7 +49,7 @@ IDLE_EXIT = 180
 KEY_FIELDS = ["anthropic_key", "openai_key", "gemini_key", "elevenlabs_key", "azure_speech_key"]
 SETTING_FIELDS = ["text_provider", "claude_model", "claude_effort", "openai_text_model", "gemini_text_model",
                   "image_provider", "gemini_image_model", "openai_image_model", "openai_image_quality",
-                  "gemini_tts_model", "openai_tts_model", "elevenlabs_model", "azure_region", "tts_workers", "image_workers",
+                  "gemini_tts_model", "openai_tts_model", "elevenlabs_model", "azure_region", "tts_workers", "image_workers", "video_encoder", "render_workers",
                   "default_category", "categories_custom"]
 store_lock = threading.RLock()
 

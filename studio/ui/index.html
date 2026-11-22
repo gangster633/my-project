@@ -1010,11 +1010,14 @@ function viewSettings() {
       <label class="field"><span>ElevenLabs 모델</span><input id="elevenlabs_model" value="${esc(s.elevenlabs_model || "")}" placeholder="eleven_multilingual_v2"></label>
       <label class="field"><span>음성 동시 요청 수</span><input id="tts_workers" type="number" min="1" max="10" value="${s.tts_workers || 4}"></label>
       <label class="field"><span>이미지 동시 요청 수</span><input id="image_workers" type="number" min="1" max="8" value="${s.image_workers || 3}"></label>
+      <label class="field"><span>영상 인코더</span><select id="video_encoder"><option value="auto">자동 (그래픽카드가 있으면 사용, 빠름)</option><option value="cpu">CPU만 사용</option><option value="nvenc">NVIDIA</option><option value="qsv">인텔 그래픽</option><option value="amf">AMD</option></select></label>
+      <label class="field"><span>장면 클립 동시 제작 수 (비우면 자동)</span><input id="render_workers" type="number" min="1" max="6" value="${s.render_workers || ""}"></label>
       <label class="field"><span>채널 성격 추가 (쉼표로)</span><input id="categories_custom" value="${esc(s.categories_custom || "")}" placeholder="예: 골프, 낚시"></label>
     </div><div class="row" style="margin-top:12px"><button onclick="saveSettings()">설정 저장</button></div>
     <p class="tiny dim">“직접 붙여넣기”는 API 키 없이 Claude.ai·ChatGPT·Gemini 채팅에서 대본을 받아 붙여 넣는 방식이에요. 음성은 윈도우 기본 음성(무료)이나 Gemini 무료 사용량을 쓰면 키 없이도, 혹은 아주 적은 비용으로 만들 수 있어요.</p></div>`;
   $("#text_provider").value = s.text_provider || "claude"; $("#claude_effort").value = s.claude_effort || "medium";
   $("#image_provider").value = s.image_provider || ""; $("#openai_image_quality").value = s.openai_image_quality || "medium";
+  $("#video_encoder").value = s.video_encoder || "auto";
 }
 async function saveKeys() {
   const body = {};
@@ -1025,9 +1028,9 @@ async function saveKeys() {
 async function clearKey(k) { await api("/api/config", {["clear_" + k]: true}); state.cfg = await api("/api/config"); state.voices = null; viewSettings(); }
 async function testKeys() { $("#testres").textContent = "확인 중…"; try { const r = await api("/api/test_keys", {}); $("#testres").innerHTML = Object.entries(r).map(([k, v]) => `<div class="${v.startsWith("정상") ? "ok" : "bad"}">${k.replace("_key", "")}: ${esc(v)}</div>`).join("") || "저장된 키가 없어요"; } catch (e) { fail(e); } }
 async function saveSettings() {
-  const ids = ["text_provider", "claude_model", "claude_effort", "openai_text_model", "gemini_text_model", "image_provider", "gemini_image_model", "openai_image_model", "openai_image_quality", "gemini_tts_model", "openai_tts_model", "elevenlabs_model", "tts_workers", "image_workers", "categories_custom"];
+  const ids = ["text_provider", "claude_model", "claude_effort", "openai_text_model", "gemini_text_model", "image_provider", "gemini_image_model", "openai_image_model", "openai_image_quality", "gemini_tts_model", "openai_tts_model", "elevenlabs_model", "tts_workers", "image_workers", "video_encoder", "render_workers", "categories_custom"];
   const body = {}; ids.forEach(i => body[i] = $("#" + i).value.trim());
-  body.tts_workers = +body.tts_workers || 4; body.image_workers = +body.image_workers || 3;
+  body.tts_workers = +body.tts_workers || 4; body.image_workers = +body.image_workers || 3; body.render_workers = +body.render_workers || 0;
   await api("/api/config", body).catch(fail); state.cfg = await api("/api/config"); state.voices = null; toast("설정을 저장했어요");
 }
 
