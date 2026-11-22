@@ -317,6 +317,48 @@ def is_illustration(p):
     return not (st.get("custom") or "").strip() and st.get("id") not in PHOTO_STYLES
 
 
+# 장면에 사람이 나오는지: 사람이 없는 장면에 인물 설명을 붙이면 Gemini가 인물을 그려 넣는다
+_NO_PEOPLE = re.compile(r"\b(no (one|people|person|humans?|figures?)|nobody|without (people|anyone|a person)|"
+                        r"no people visible|unoccupied|deserted)\b", re.I)
+_PEOPLE = re.compile(r"\b(woman|women|man|men|person|people|she|he|her|his|him|they|husband|wife|couple|child|children|"
+                     r"kids?|girl|boy|technician|worker|staff|hands?|fingers?|face|faces|character|family|crowd|customer|"
+                     r"elderly|grandmother|grandfather|mother|father|parents?|student|doctor|nurse|caregiver|driver|owner)\b", re.I)
+
+
+def scene_has_people(sc):
+    t = f"{sc.get('prompt') or ''} {sc.get('visual') or ''}"
+    if _NO_PEOPLE.search(t):
+        return False
+    if _PEOPLE.search(sc.get("prompt") or ""):
+        return True
+    # 영어 설명이 없으면 한국어 설명으로 판단
+    return bool(re.search(r"사람|인물|주인공|여성|남성|부부|가족|아이|손|얼굴|기사|직원|어르신|부모", sc.get("visual") or ""))
+
+
+NO_PEOPLE_EN = "No people, no human figures, no hands"
+_CHAR_NOUN = re.compile(r"\b(woman|man|girl|boy|grandmother|grandfather|lady|gentleman)\b", re.I)
+_PRONOUN = {"woman": r"she|her", "girl": r"she|her", "lady": r"she|her", "grandmother": r"she|her",
+            "man": r"he|his|him", "boy": r"he|his|him", "gentleman": r"he|his|him", "grandfather": r"he|his|him"}
+
+
+def scene_has_character(p, sc):
+    """주인공이 이 장면에 나오는지: 주인공 설명의 명사(woman 등)나 대명사가 장면 설명에 있으면 나온다고 본다.
+    보일러 기사처럼 다른 사람만 나오는 장면에 주인공 설명을 붙이면 그 사람이 주인공 얼굴로 그려진다."""
+    char = p["style"].get("character", "").strip()
+    if not char or not scene_has_people(sc):
+        return False
+    m = _CHAR_NOUN.search(char)
+    if not m:
+        return True
+    noun = m.group(1).lower()
+    t = sc.get("prompt") or ""
+    if re.search(rf"\b({noun}|{_PRONOUN[noun]})\b", t, re.I):
+        return True
+    if not t.strip():  # 영어 설명이 없으면 한국어 설명의 '주인공'으로
+        return "주인공" in (sc.get("visual") or "")
+    return False
+
+
 def scene_text(p, sc):
     """장면 그림 설명. 그림 화풍이면 사진 촬영 용어를 뺀다."""
     t = sc.get("prompt") or sc.get("visual", "")
@@ -397,7 +439,9 @@ def scene_times(p, lang="ko"):
 def image_prompt(p, scene):
     char = p["style"].get("character", "").strip()
     parts = [scene_text(p, scene)]
-    if char:
+    if not scene_has_people(scene):
+        parts.append(NO_PEOPLE_EN)
+    elif scene_has_character(p, scene):
         parts.append(f"Recurring character (keep identical): {char}")
     parts.append(f"Art style: {style_prompt(p)}" + (f", {ILLUST_GUARD}" if is_illustration(p) else ""))
     if p["style"].get("allow_text"):
@@ -512,11 +556,15 @@ def helper_scene_prompt(p, i):
     sc = p["storyboard"]["scenes"][i]
     char = p["style"].get("character", "").strip()
     ratio = "가로 16:9" if _res(p)[0] >= _res(p)[1] else "세로 9:16"
+    people = scene_has_people(sc)
     lines = [f"장면 {i + 1}: {sc.get('visual', '')}", scene_text(p, sc)]
-    if char:
+    if not people:
+        lines.append(NO_PEOPLE_EN)
+    elif scene_has_character(p, sc):
         lines.append(f"Recurring character (keep identical): {char}")
     lines.append(f"Art style: {style_prompt(p)}" + (f", {ILLUST_GUARD}" if is_illustration(p) else ""))
-    lines.append(f"({ratio}, 처음과 같은 그림체" + (", 사진 말고 그림으로" if is_illustration(p) else "") + ", 글자 없이 그려 주세요)")
+    lines.append(f"({ratio}, 처음과 같은 그림체" + (", 사진 말고 그림으로" if is_illustration(p) else "")
+                 + (", 사람 없이" if not people else "") + ", 글자 없이 그려 주세요)")
     return "\n".join(lines)
 
 
