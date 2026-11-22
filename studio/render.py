@@ -302,32 +302,40 @@ def _wrap(text, n):
 MOTIONS = ["zoom_in", "zoom_out", "pan_left", "pan_right", "pan_up", "pan_down"]
 
 
-def _zoompan(motion, frames, w, h, fps, strength=0.12):
+# 화면 효과 방식이 바뀌면 올린다 (예전에 만든 장면 클립을 다시 만들게 하는 표시)
+MOTION_VERSION = 2
+
+
+def _perspective(motion, frames, strength=0.12):
+    """켄번즈(줌·이동)를 perspective 필터로. zoompan 은 위치를 정수 픽셀로 반올림해 느린 움직임에서
+    프레임마다 툭툭 흔들린다. perspective 는 픽셀 사이 위치까지 보간해서 매끄럽다(측정: 흔들림 약 1/8)."""
     N = max(frames - 1, 1)
-    p = f"(on/{N})"
-    ease = f"(0.5-0.5*cos(PI*{p}))"  # 부드럽게 시작·끝
+    e = f"(0.5-0.5*cos(PI*min(in/{N},1)))"  # 부드럽게 시작·끝
     z1 = 1 + strength
-    cx, cy = "iw/2-(iw/zoom/2)", "ih/2-(ih/zoom/2)"
     if motion == "zoom_in":
-        z, x, y = f"1+{strength}*{ease}", cx, cy
+        z, fx, fy = f"(1+{strength}*{e})", "0.5", "0.5"
     elif motion == "zoom_out":
-        z, x, y = f"{z1}-{strength}*{ease}", cx, cy
+        z, fx, fy = f"({z1}-{strength}*{e})", "0.5", "0.5"
     elif motion == "pan_left":
-        z, x, y = f"{z1}", f"(iw-iw/zoom)*(1-{ease})", cy
+        z, fx, fy = f"{z1}", f"(1-{e})", "0.5"
     elif motion == "pan_right":
-        z, x, y = f"{z1}", f"(iw-iw/zoom)*{ease}", cy
+        z, fx, fy = f"{z1}", e, "0.5"
     elif motion == "pan_up":
-        z, x, y = f"{z1}", cx, f"(ih-ih/zoom)*(1-{ease})"
+        z, fx, fy = f"{z1}", "0.5", f"(1-{e})"
     elif motion == "pan_down":
-        z, x, y = f"{z1}", cx, f"(ih-ih/zoom)*{ease}"
+        z, fx, fy = f"{z1}", "0.5", e
     else:
-        z, x, y = "1", "0", "0"
-    return f"zoompan=z='{z}':x='{x}':y='{y}':d=1:s={w}x{h}:fps={fps}"
+        return None
+    # 보여 줄 영역: 크기 W/z × H/z, 왼쪽 위 = (W - W/z)*fx, (H - H/z)*fy
+    l, t = f"(W-W/{z})*{fx}", f"(H-H/{z})*{fy}"
+    r, b = f"({l}+W/{z})", f"({t}+H/{z})"
+    return (f"perspective=x0='{l}':y0='{t}':x1='{r}':y1='{t}':x2='{l}':y2='{b}':x3='{r}':y3='{b}'"
+            f":interpolation=linear:sense=source:eval=frame")
 
 
-def prepare_still(src, dst, w, h, vertical_blur):
-    """그림을 화면비에 맞춰 2배 크기로 준비. 세로 영상에 가로 그림이면 흐린 배경 + 가운데 배치."""
-    W, H = w * 2, h * 2
+def prepare_still(src, dst, w, h, vertical_blur, factor=1):
+    """그림을 화면비에 맞춰 (factor 배) 크기로 준비. 세로 영상에 가로 그림이면 흐린 배경 + 가운데 배치."""
+    W, H = w * factor, h * factor
     info = media_info(src)
     sw = sh = 0
     for s in info.get("streams", []):
@@ -358,9 +366,9 @@ def scene_clip(src, dst, dur, motion, w, h, fps=30, is_video=False, fill="freeze
     frames = max(int(round(dur * fps)), 1)
     prep = Path(workdir or Path(dst).parent) / (Path(dst).stem + "_prep.png")
     prepare_still(src, prep, w, h, vertical_blur)
-    # 그림 한 장을 한 번만 읽고 zoompan 이 프레임을 모두 만들게 한다(d=프레임 수). 매 프레임 다시 읽는 것보다 3배 빠르다.
-    vf = _zoompan(motion if motion in MOTIONS else "still", frames, w, h, fps, strength).replace(":d=1:", f":d={frames}:") + ",setsar=1,format=yuv420p"
-    run(["-i", prep, "-vf", vf, "-frames:v", str(frames)] + enc + [dst])
+    eff = _perspective(motion, frames, strength)
+    vf = (eff + "," if eff else "") + "setsar=1,format=yuv420p"
+    run(["-loop", "1", "-framerate", str(fps), "-i", prep, "-vf", vf, "-frames:v", str(frames)] + enc + [dst])
     try:
         prep.unlink()
     except OSError:

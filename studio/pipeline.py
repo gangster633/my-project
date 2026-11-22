@@ -622,7 +622,7 @@ def run_render(p, cfg, ctx, folder, lang="ko", shorts=False):
             src = folder / ph
         motion = _motion(p, i, sc)
         key = hashlib.sha1(json.dumps([str(src), src.stat().st_mtime, round(dur, 3), motion, W, H, fps, is_video,
-                                       vcfg.get("fill"), vcfg.get("strength"), shorts]).encode()).hexdigest()[:12]
+                                       vcfg.get("fill"), vcfg.get("strength"), shorts, render.MOTION_VERSION]).encode()).hexdigest()[:12]
         name = f"c{i:03d}_{key}.mp4"
         used.add(name)
         if not (cdir / name).exists():  # 바뀐 장면만 다시 만든다
