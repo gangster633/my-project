@@ -294,13 +294,9 @@ def is_placeholder(v):
 
 # ---------------- 공통: AI 답에서 JSON 꺼내기 ----------------
 
-def extract_json(text):
-    text = text.strip()
-    m = re.search(r"```(?:json)?\s*(.+?)```", text, re.S)
-    if m:
-        text = m.group(1)
-    start = min([i for i in (text.find("{"), text.find("[")) if i >= 0] or [0])
-    depth, end, in_str, esc = 0, None, False, False
+def _balanced(text, start):
+    """text[start] 의 괄호와 짝이 맞는 끝 위치 (문자열 안 괄호는 무시). 없으면 None."""
+    depth, in_str, esc = 0, False, False
     for i in range(start, len(text)):
         c = text[i]
         if in_str:
@@ -317,6 +313,28 @@ def extract_json(text):
         elif c in "}]":
             depth -= 1
             if depth == 0:
-                end = i + 1
-                break
-    return json.loads(text[start:end] if end else text[start:])
+                return i + 1
+    return None
+
+
+def extract_json(text):
+    """AI 답에서 JSON 하나를 꺼낸다. 앞뒤 설명 글에 [직접 붙여넣기] 같은 괄호가 있어도
+    실제로 JSON 으로 읽히는 첫 덩어리를 찾는다(객체 {...} 를 먼저)."""
+    text = text.strip()
+    m = re.search(r"```(?:json)?\s*(.+?)```", text, re.S)
+    if m:
+        try:
+            return json.loads(m.group(1))
+        except ValueError:
+            pass
+    first_err = None
+    for opener in ("[{" if text.startswith("[") else "{["):
+        pos = text.find(opener)
+        while pos >= 0:
+            end = _balanced(text, pos)
+            try:
+                return json.loads(text[pos:end] if end else text[pos:])
+            except ValueError as e:
+                first_err = first_err or e
+            pos = text.find(opener, pos + 1)
+    raise ValueError("답에서 JSON을 찾지 못했어요. AI의 답 전체를 넣어 주세요." + (f" ({first_err})" if first_err else ""))

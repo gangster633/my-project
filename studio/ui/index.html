@@ -211,7 +211,8 @@ function toast(msg, bad) {
   const d = document.createElement("div");
   d.textContent = msg;
   d.style.cssText = `position:fixed;left:50%;top:18px;transform:translateX(-50%);background:${bad ? "#7f1d1d" : "#0f3b46"};color:#fff;padding:10px 18px;border-radius:10px;z-index:99;max-width:80vw;box-shadow:0 8px 24px #0007`;
-  document.body.appendChild(d);
+  // 창(dialog)이 열려 있으면 그 안에 띄운다. 바깥에 띄우면 창 뒤에 가려 안 보인다.
+  (document.querySelector("dialog[open]") || document.body).appendChild(d);
   setTimeout(() => d.remove(), bad ? 6000 : 2600);
 }
 const fail = e => toast(e.message || String(e), true);
@@ -328,14 +329,19 @@ function openPasteDialog(step, prompt, ok) {
     <details ${ok ? "" : "open"}><summary class="dim tiny">지시문 보기</summary><textarea rows="6" readonly>${esc(prompt)}</textarea></details>
     <button class="sm ${ok ? "ghost" : ""}" id="recopy">지시문 ${ok ? "다시 " : ""}복사</button>
     <textarea id="pasted" rows="12" placeholder="AI 답을 여기에 붙여 넣기" style="margin-top:10px"></textarea>
+    <div id="pasteerr" class="notice" hidden style="margin-top:8px"></div>
     <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="ghost" onclick="dlg.close()">닫기</button><button id="pastebtn">넣기</button></div>`;
   d.showModal();
   $("#recopy").onclick = () => copy(prompt);
   $("#pastebtn").onclick = async () => {
+    const btn = $("#pastebtn"), err = $("#pasteerr");
+    btn.disabled = true; btn.textContent = "넣는 중…"; err.hidden = true;
     try {
       const r = await api("/api/import", {id: state.pid, step, text: $("#pasted").value});
       d.close(); await loadProject(); render(); toast(r.summary || "넣었어요");
-    } catch (e) { fail(e); }
+    } catch (e) {
+      err.textContent = "넣지 못했어요: " + (e.message || e); err.hidden = false;  // 창 안에 바로 보이게
+    } finally { btn.disabled = false; btn.textContent = "넣기"; }
   };
 }
 async function runStep(step, opts) {
