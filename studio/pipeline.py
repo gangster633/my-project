@@ -304,6 +304,27 @@ def style_prompt(p):
     return (st.get("custom") or "").strip() or base
 
 
+# 사진·3D처럼 보여도 되는 화풍. 나머지(웹툰·수채·플랫 등)는 사진처럼 나오지 않게 막는다.
+PHOTO_STYLES = {"cinematic", "news_photo", "pixar3d", "miniature", "cyberpunk"}
+ILLUST_GUARD = "2D hand-drawn illustration, NOT a photograph, not photorealistic, no 3D render"
+# 그림 화풍인데 장면 설명에 섞이면 사진 쪽으로 끌려가는 촬영 용어
+_PHOTO_WORDS = re.compile(r",?\s*\b(shallow depth of field|depth of field|bokeh|photorealistic|photo-?realistic|photograph(?:ic|y)?|"
+                          r"photo|DSLR|\d+\s?mm( lens)?|lens flare|cinematic lighting|film still|hyper-?realistic|realistic)\b", re.I)
+
+
+def is_illustration(p):
+    st = p["style"]
+    return not (st.get("custom") or "").strip() and st.get("id") not in PHOTO_STYLES
+
+
+def scene_text(p, sc):
+    """장면 그림 설명. 그림 화풍이면 사진 촬영 용어를 뺀다."""
+    t = sc.get("prompt") or sc.get("visual", "")
+    if is_illustration(p):
+        t = re.sub(r"\s{2,}", " ", _PHOTO_WORDS.sub("", t)).strip(" ,")
+    return t
+
+
 def storyboard_prompt(p):
     sents = [s["text"] for s in (p["audio"]["sentences"] if p.get("audio") else textutil.split_sentences(p["script"]))]
     total = p["audio"]["total"] if p.get("audio") else len("".join(sents)) / 7.5
@@ -375,10 +396,10 @@ def scene_times(p, lang="ko"):
 
 def image_prompt(p, scene):
     char = p["style"].get("character", "").strip()
-    parts = [scene.get("prompt") or scene.get("visual", "")]
+    parts = [scene_text(p, scene)]
     if char:
         parts.append(f"Recurring character (keep identical): {char}")
-    parts.append(f"Art style: {style_prompt(p)}")
+    parts.append(f"Art style: {style_prompt(p)}" + (f", {ILLUST_GUARD}" if is_illustration(p) else ""))
     if p["style"].get("allow_text"):
         parts.append("Any visible signs, labels or handwriting must be short, correct Korean (Hangul). No captions, no watermark, no logo.")
     else:
@@ -476,7 +497,8 @@ def helper_intro(p):
     char = p["style"].get("character", "").strip()
     text = (f"지금부터 유튜브 영상에 쓸 그림을 장면마다 한 장씩 부탁할게요. 이 대화의 모든 그림은 아래 조건을 똑같이 지켜 주세요.\n"
             f"- 그림체: {style_prompt(p)}\n"
-            f"- 비율: {'가로 16:9' if _res(p)[0] >= _res(p)[1] else '세로 9:16'}\n")
+            + ("- 사진처럼 사실적인 그림이나 3D 렌더링은 안 돼요. 반드시 손으로 그린 2D 그림으로 그려 주세요.\n" if is_illustration(p) else "")
+            + f"- 비율: {'가로 16:9' if _res(p)[0] >= _res(p)[1] else '세로 9:16'}\n")
     if char:
         text += f"- 반복해서 나오는 인물(외형을 항상 똑같이): {char}\n"
     text += ("- 그림 안에 글자는 짧은 한글만 써 주세요.\n" if p["style"].get("allow_text")
@@ -486,8 +508,16 @@ def helper_intro(p):
 
 
 def helper_scene_prompt(p, i):
+    """반자동 도우미: 장면마다 보내는 지시문. 대화가 길어지면 그림체를 잊으므로 매번 그림체를 다시 적는다."""
     sc = p["storyboard"]["scenes"][i]
-    return f"장면 {i + 1}: {sc.get('visual', '')}\n{sc.get('prompt') or ''}\n(같은 그림체, {'가로 16:9' if _res(p)[0] >= _res(p)[1] else '세로 9:16'}로 그려 주세요)"
+    char = p["style"].get("character", "").strip()
+    ratio = "가로 16:9" if _res(p)[0] >= _res(p)[1] else "세로 9:16"
+    lines = [f"장면 {i + 1}: {sc.get('visual', '')}", scene_text(p, sc)]
+    if char:
+        lines.append(f"Recurring character (keep identical): {char}")
+    lines.append(f"Art style: {style_prompt(p)}" + (f", {ILLUST_GUARD}" if is_illustration(p) else ""))
+    lines.append(f"({ratio}, 처음과 같은 그림체" + (", 사진 말고 그림으로" if is_illustration(p) else "") + ", 글자 없이 그려 주세요)")
+    return "\n".join(lines)
 
 
 # ---------------- 6. 영상 ----------------
