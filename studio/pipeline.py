@@ -312,7 +312,9 @@ def storyboard_prompt(p):
 
 def set_storyboard(p, text):
     data = prompts.extract_json(text) if isinstance(text, str) else text
-    n = len(p["audio"]["sentences"]) if p.get("audio") else len(textutil.split_sentences(p["script"]))
+    n = len(p["audio"]["sentences"]) if p.get("audio") else len(textutil.split_sentences(p.get("script") or ""))
+    if not n:
+        raise ValueError("대본이 비어 있어요. 대본을 먼저 저장해 주세요.")
     sb = prompts.fix_storyboard(data, n)
     old = {(s["first"], s["last"]): s for s in (p.get("storyboard") or {}).get("scenes", [])}
     for s in sb["scenes"]:  # 같은 범위 장면의 그림은 이어서 쓴다
@@ -706,6 +708,13 @@ def meta_prompt(p):
 
 def set_meta(p, text):
     data = prompts.extract_json(text) if isinstance(text, str) else text
+    if not isinstance(data, dict):
+        raise ValueError("업로드 정보 JSON 모양이 아니에요. AI의 답 전체를 넣어 주세요.")
+    data = dict(data)
+    for k in ("titles", "tags", "thumb_texts"):
+        data[k] = [str(t).strip() for t in (data.get(k) or []) if not prompts.is_placeholder(t)]
+    if not data["titles"] and prompts.is_placeholder(data.get("description")):
+        raise ValueError("제목과 설명이 비어 있어요. 지시문이 아니라 AI의 답을 넣어 주세요.")
     p["meta"] = {"titles": data.get("titles", []), "description": data.get("description", ""), "tags": data.get("tags", []),
                  "thumb_texts": data.get("thumb_texts", []), "pinned_comment": data.get("pinned_comment", ""),
                  "shorts": data.get("shorts") or {}}

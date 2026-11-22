@@ -215,7 +215,27 @@ function toast(msg, bad) {
   setTimeout(() => d.remove(), bad ? 6000 : 2600);
 }
 const fail = e => toast(e.message || String(e), true);
-function copy(text) { navigator.clipboard.writeText(text).then(() => toast("복사했어요")).catch(() => { const t = document.createElement("textarea"); t.value = text; document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); toast("복사했어요"); }); }
+// 클립보드: 버튼을 누른 그 순간에 복사를 시작해야 브라우저가 막지 않는다.
+function execCopy(text) { const t = document.createElement("textarea"); t.value = text; t.style.position = "fixed"; t.style.opacity = "0"; document.body.appendChild(t); t.select(); let ok = false; try { ok = document.execCommand("copy"); } catch (e) {} t.remove(); return ok; }
+function tryCopy(text) { return (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(() => true, () => execCopy(text)); }
+function copy(text) { return tryCopy(text).then(ok => { toast(ok ? "복사했어요" : "복사가 막혔어요. 글을 직접 선택해 Ctrl+C 로 복사해 주세요", !ok); return ok; }); }
+// 서버에서 받아 올 글(Promise)을 누르는 순간 복사 예약한다 (ClipboardItem 이 Promise 를 받는다)
+function copyLater(textP) {
+  let done;
+  try {
+    if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
+      const item = new ClipboardItem({"text/plain": textP.then(t => new Blob([t], {type: "text/plain"}))});
+      done = navigator.clipboard.write([item]).then(() => true, () => textP.then(tryCopy));
+    }
+  } catch (e) { done = null; }
+  return (done || textP.then(tryCopy)).catch(() => false);
+}
+// 서버 글을 가져와 복사하고 결과를 알린다 (단순 복사 버튼용)
+function copyFrom(textP) {
+  const c = copyLater(textP);
+  return Promise.all([textP, c]).then(([t, ok]) => { toast(ok ? "복사했어요" : "복사가 막혔어요. 다시 눌러 주세요", !ok); return t; }, fail);
+}
+const promptOf = step => api(`/api/prompt?id=${state.pid}&step=${encodeURIComponent(step)}`).then(r => r.prompt);
 function toggleTheme() { const r = document.documentElement; const n = r.dataset.theme === "light" ? "dark" : "light"; r.dataset.theme = n; try { localStorage.vwTheme = n; } catch (e) {} }
 try { if (localStorage.vwTheme) document.documentElement.dataset.theme = localStorage.vwTheme; } catch (e) {}
 async function quitApp() { if (confirm("프로그램을 종료할까요?")) { await api("/api/quit", {}).catch(() => {}); document.body.innerHTML = "<div class='empty' style='margin:auto'>종료했어요. 이 탭을 닫아도 됩니다.</div>"; } }
@@ -291,21 +311,31 @@ function aiButton(step, label, opts, cls) {
   if (manual()) return `<button class="${cls || ""}" onclick='manualStep("${step}", ${o})'>${label} (지시문 복사)</button>`;
   return `<button class="${cls || ""}" onclick='runStep("${step.split(":")[0]}", ${o})'>${label}</button>`;
 }
-async function manualStep(step, opts) {
+function manualStep(step, opts) {
   if (step.startsWith("translate")) step = "translate:" + opts.lang;
-  const {prompt} = await api(`/api/prompt?id=${state.pid}&step=${encodeURIComponent(step)}`).catch(fail) || {};
-  if (!prompt) return;
-  copy(prompt);
+  // 대본 화면이면 입력값을 먼저 저장한 뒤 지시문을 만든다. 복사는 누른 순간 예약해 둔다.
+  const pre = state.view === "script" && $("#s_topic") ? saveScriptForm() : Promise.resolve();
+  const promptP = pre.then(() => promptOf(step));
+  const copied = copyLater(promptP);
+  return Promise.all([promptP, copied]).then(([prompt, ok]) => prompt && openPasteDialog(step, prompt, ok), fail);
+}
+function openPasteDialog(step, prompt, ok) {
   const d = $("#dlg");
   d.innerHTML = `<h2>직접 붙여넣기</h2>
-    <ol class="dim" style="margin:0 0 10px;padding-left:18px"><li>지시문을 복사했어요. Claude.ai, ChatGPT, Gemini 같은 AI 채팅에 붙여 넣으세요.</li>
-    <li>AI의 답을 <b>전부</b> 복사해 아래에 붙여 넣고 [넣기]를 누르세요.</li></ol>
-    <details><summary class="dim tiny">지시문 보기</summary><textarea rows="6" readonly>${esc(prompt)}</textarea><button class="sm ghost" onclick="copy(this.previousElementSibling.value)">다시 복사</button></details>
+    ${ok ? "" : `<div class="notice">브라우저가 자동 복사를 막았어요. 아래 <b>[지시문 복사]</b>를 한 번 더 눌러 주세요.</div>`}
+    <ol class="dim" style="margin:0 0 10px;padding-left:18px"><li>${ok ? "지시문을 복사했어요." : "지시문을 복사한 뒤"} Claude.ai, ChatGPT, Gemini 같은 AI 채팅에 붙여 넣으세요.</li>
+    <li>AI의 <b>답</b>을 전부 복사해 아래에 붙여 넣고 [넣기]를 누르세요. 지시문이 아니라 답이에요.</li></ol>
+    <details ${ok ? "" : "open"}><summary class="dim tiny">지시문 보기</summary><textarea rows="6" readonly>${esc(prompt)}</textarea></details>
+    <button class="sm ${ok ? "ghost" : ""}" id="recopy">지시문 ${ok ? "다시 " : ""}복사</button>
     <textarea id="pasted" rows="12" placeholder="AI 답을 여기에 붙여 넣기" style="margin-top:10px"></textarea>
     <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="ghost" onclick="dlg.close()">닫기</button><button id="pastebtn">넣기</button></div>`;
   d.showModal();
+  $("#recopy").onclick = () => copy(prompt);
   $("#pastebtn").onclick = async () => {
-    try { await api("/api/import", {id: state.pid, step, text: $("#pasted").value}); d.close(); await loadProject(); render(); toast("넣었어요"); } catch (e) { fail(e); }
+    try {
+      const r = await api("/api/import", {id: state.pid, step, text: $("#pasted").value});
+      d.close(); await loadProject(); render(); toast(r.summary || "넣었어요");
+    } catch (e) { fail(e); }
   };
 }
 async function runStep(step, opts) {
@@ -447,8 +477,6 @@ async function saveScriptForm() {
 // AI 단계를 실행하기 전에 입력값을 저장한다
 const _runStep = runStep;
 runStep = async (step, opts) => { if (state.view === "script" && $("#s_topic")) await saveScriptForm(); return _runStep(step, opts); };
-const _manualStep = manualStep;
-manualStep = async (step, opts) => { if (state.view === "script" && $("#s_topic")) await saveScriptForm(); return _manualStep(step, opts); };
 async function saveScript(quiet) { await save({script: $("#s_script").value}, quiet); await loadProject(); if (!quiet) render(); }
 async function saveTranslation(quiet) { const t = {...state.p.translations, [state.scriptLang]: $("#s_script").value}; await save({translations: t}, quiet); }
 async function fetchUrl() {
@@ -598,7 +626,7 @@ function viewStyle() {
   });
 }
 function setSceneSec(v) { $("#st_sec").value = v; $("#st_sec").dispatchEvent(new Event("input")); saveStyle(false); }
-async function copyStylePrompt(id) { const {prompt} = await api(`/api/prompt?id=${state.pid}&step=style:${id}`); copy(prompt); }
+function copyStylePrompt(id) { return copyFrom(promptOf(`style:${id}`)); }
 function pickStyleImage(id) { const inp = $("#st_file"); inp.onchange = () => inp.files[0] && putStyleImage(id, inp.files[0]); inp.value = ""; inp.click(); }
 async function putStyleImage(id, f) { try { await upload(f, {kind: "style", style: id, token: TOKEN}); state.cfg = await api("/api/config"); viewStyle(); toast("예시 그림을 넣었어요"); } catch (e) { fail(e); } }
 async function pickStyle(id) { $("#st_custom").value = ""; state.p.style.id = id; await saveStyle(false); viewStyle(); drawSteps(); }
@@ -753,8 +781,8 @@ function helperWatch() {
   tick();
 }
 function openSite() { const u = HELPER_SITES[$("#h_site").value][1]; if (u) window.open(u, "vw_imagesite"); }
-async function helperIntro() { const {prompt} = await api(`/api/prompt?id=${state.pid}&step=helper_intro`); copy(prompt); openSite(); }
-async function helperCopy(i) { const {prompt} = await api(`/api/prompt?id=${state.pid}&step=scene:${i}`); copy(prompt); openSite(); }
+function helperIntro() { return copyFrom(promptOf("helper_intro")).then(openSite); }
+function helperCopy(i) { return copyFrom(promptOf(`scene:${i}`)).then(openSite); }
 async function helperSkip(i) {
   const n = state.p.storyboard.scenes.length;
   let k = (i + 1) % n;
@@ -766,8 +794,8 @@ async function helperTarget(i) { await api("/api/helper/target", {target: i}); h
 async function setImgProv(v) { await save({image_provider: v}, true); viewImage(); }
 function pickFile(i) { const inp = $("#i_file"); inp.onchange = () => inp.files[0] && putScene(i, inp.files[0]); inp.value = ""; inp.click(); }
 async function putScene(i, f) { try { toast("올리는 중…"); await upload(f, {id: state.pid, kind: "scene", scene: i, token: TOKEN}); await loadProject(); render(); } catch (e) { fail(e); } }
-async function copyAllPrompts() { const {prompt} = await api(`/api/prompt?id=${state.pid}&step=images`); copy(prompt); }
-async function copyPrompt(i) { const {prompt} = await api(`/api/prompt?id=${state.pid}&step=images`); const part = prompt.split(/\n(?=\[장면 )/)[i] || ""; copy(part.split("\n").slice(1).join("\n").trim()); }
+function copyAllPrompts() { return copyFrom(promptOf("images")); }
+function copyPrompt(i) { return copyFrom(promptOf("images").then(prompt => { const part = prompt.split(/\n(?=\[장면 )/)[i] || ""; return part.split("\n").slice(1).join("\n").trim(); })); }
 
 // ---------------- 6. 영상 ----------------
 function viewVideo() {

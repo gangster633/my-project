@@ -34,7 +34,7 @@ import prompts  # noqa: E402
 import render  # noqa: E402
 
 APP_NAME = "AI 영상 공방"
-VERSION = "1.3.3"
+VERSION = "1.3.4"
 DATA_DIR = Path(os.environ.get("VIDEO_WORKSHOP_HOME") or (Path(os.environ.get("APPDATA", Path.home())) / "VideoWorkshop"))
 PROJECTS = DATA_DIR / "projects"
 CONFIG = DATA_DIR / "config.json"
@@ -306,6 +306,30 @@ threading.Thread(target=helper_loop, daemon=True).start()
 
 # ---------------- 웹 서버 ----------------
 
+def prompt_for(p, step, cfg):
+    """단계별 지시문 (직접 붙여넣기·반자동 도우미용)."""
+    if step == "script":
+        return pipeline.script_prompt(p, cfg)
+    elif step == "factcheck":
+        return pipeline.factcheck_prompt(p)
+    elif step.startswith("translate:"):
+        return prompts.build_translate(p["script"], step.split(":")[1])
+    elif step == "storyboard":
+        return pipeline.storyboard_prompt(p)
+    elif step == "meta":
+        return pipeline.meta_prompt(p)
+    elif step == "images":
+        return pipeline.all_prompts_text(p)
+    elif step == "helper_intro":
+        return pipeline.helper_intro(p)
+    elif step.startswith("scene:"):
+        return pipeline.helper_scene_prompt(p, int(step.split(":")[1]))
+    elif step.startswith("style:"):
+        return prompts.style_sample_prompt(step.split(":", 1)[1])
+    else:
+        raise ValueError("알 수 없는 단계")
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "VideoWorkshop"
     protocol_version = "HTTP/1.1"
@@ -446,26 +470,7 @@ class Handler(BaseHTTPRequestHandler):
             p = load_project(one("id"))
             step = one("step")
             cfg = load_config()
-            if step == "script":
-                text = pipeline.script_prompt(p, cfg)
-            elif step == "factcheck":
-                text = pipeline.factcheck_prompt(p)
-            elif step.startswith("translate:"):
-                text = prompts.build_translate(p["script"], step.split(":")[1])
-            elif step == "storyboard":
-                text = pipeline.storyboard_prompt(p)
-            elif step == "meta":
-                text = pipeline.meta_prompt(p)
-            elif step == "images":
-                text = pipeline.all_prompts_text(p)
-            elif step == "helper_intro":
-                text = pipeline.helper_intro(p)
-            elif step.startswith("scene:"):
-                text = pipeline.helper_scene_prompt(p, int(step.split(":")[1]))
-            elif step.startswith("style:"):
-                text = prompts.style_sample_prompt(step.split(":", 1)[1])
-            else:
-                raise ValueError("알 수 없는 단계")
+            text = prompt_for(p, step, cfg)
             return self.send(HTTPStatus.OK, {"prompt": text})
         return self.send(HTTPStatus.NOT_FOUND, {"error": "not found"})
 
@@ -677,20 +682,30 @@ class Handler(BaseHTTPRequestHandler):
                 p = load_project(d["id"])
                 step, text = d["step"], d["text"]
                 cfg = load_config()
+                if not text.strip():
+                    raise ValueError("붙여 넣은 글이 없어요. AI의 답을 복사해 넣어 주세요.")
+                if prompts.is_prompt_echo(text, prompt_for(p, step, cfg)):
+                    raise ValueError("붙여 넣은 글이 지시문이에요. 지시문을 AI 채팅에 보낸 뒤, AI가 돌려준 답을 복사해 넣어 주세요.")
                 if step == "script":
                     pipeline.set_script(p, text, cfg)
+                    first = p["script"].split("\n", 1)[0].strip()
+                    summary = f"대본 {len(p['script']):,}자를 넣었어요. 첫 줄이 맞는지 확인해 주세요: “{first[:30]}{'…' if len(first) > 30 else ''}”"
                 elif step == "factcheck":
                     pipeline.set_factcheck(p, text)
+                    summary = f"확인할 곳 {len(p['factcheck'] or [])}개를 넣었어요"
                 elif step.startswith("translate:"):
                     p["translations"][step.split(":")[1]] = prompts.parse_script(text)
+                    summary = "번역을 넣었어요"
                 elif step == "storyboard":
                     pipeline.set_storyboard(p, text)
+                    summary = f"장면 {len(p['storyboard']['scenes'])}개로 나눴어요"
                 elif step == "meta":
                     pipeline.set_meta(p, text)
+                    summary = f"제목 후보 {len(p['meta']['titles'])}개, 태그 {len(p['meta']['tags'])}개를 넣었어요"
                 else:
                     raise ValueError("알 수 없는 단계")
                 save_project(p)
-            return self.send(HTTPStatus.OK, {"ok": True})
+            return self.send(HTTPStatus.OK, {"ok": True, "summary": summary})
         if path == "/api/run":
             pdir(d["id"])
             start_job(d["id"], d["step"], d.get("opts") or {})

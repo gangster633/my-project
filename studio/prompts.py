@@ -203,6 +203,15 @@ JSON 한 개만 출력: {{"character": "...", "scenes": [{{"first": 0, "last": 1
 
 def fix_storyboard(data, n_sent):
     """AI가 낸 장면 범위를 검사해 빈틈·겹침 없이 0..n-1 을 덮도록 고친다."""
+    if not isinstance(data, dict):
+        raise ValueError("스토리보드 JSON 모양이 아니에요. AI의 답 전체를 넣어 주세요.")
+    raw = [s for s in data.get("scenes", []) if isinstance(s, dict)]
+    if not raw:
+        raise ValueError("답에 장면(scenes)이 없어요. AI의 답 전체를 넣어 주세요.")
+    if all(is_placeholder(s.get("prompt")) and is_placeholder(s.get("visual")) for s in raw):
+        raise ValueError("장면 설명이 \"...\" 뿐이에요. 지시문 속 예시가 들어간 것 같아요. AI의 답을 넣어 주세요.")
+    if is_placeholder(data.get("character")):
+        data = dict(data, character="")
     scenes = sorted((s for s in data.get("scenes", []) if isinstance(s, dict)), key=lambda s: int(s.get("first", 0)))
     out, nxt = [], 0
     for s in scenes:
@@ -263,6 +272,24 @@ JSON 한 개만 출력.
 
 [문장]
 {numbered}"""
+
+
+# ---------------- 공통: 붙여 넣은 답 검사 ----------------
+
+PLACEHOLDERS = {"", "...", "…", "..", "string", "<...>"}
+PROMPT_MARKERS = ("JSON 한 개만 출력", "대본 본문만 출력하라")
+
+
+def is_prompt_echo(text, prompt):
+    """답 대신 지시문을 붙여 넣었는지: 지시문 첫 줄이나 지시문에만 있는 문구가 들어 있으면 그렇다고 본다."""
+    first = next((l.strip() for l in (prompt or "").split("\n") if l.strip()), "")
+    if len(first) >= 10 and first in text:
+        return True
+    return any(m in text and m in (prompt or "") for m in PROMPT_MARKERS)
+
+
+def is_placeholder(v):
+    return str(v if v is not None else "").strip() in PLACEHOLDERS
 
 
 # ---------------- 공통: AI 답에서 JSON 꺼내기 ----------------
