@@ -217,7 +217,7 @@ def sapi_voices():
 def synth_sapi_batch(items, voice, rate):
     """items: [(text, wav_path)]. PowerShell 한 번으로 모두 합성한다."""
     with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as f:
-        json.dump([{"t": t, "p": str(p)} for t, p in items], f, ensure_ascii=False)
+        json.dump([{"t": plain_spoken(t), "p": str(p)} for t, p in items], f, ensure_ascii=False)
         jpath = f.name
     r = max(-10, min(10, round((rate - 1.0) * 10)))
     ps = (f"Add-Type -AssemblyName System.Speech;$s=New-Object System.Speech.Synthesis.SpeechSynthesizer;"
@@ -237,7 +237,7 @@ def synth_one(cfg, provider, voice, text, out_base, speed=1.0, style=""):
     """문장 하나를 합성해 파일 경로(.wav/.mp3)를 돌려준다."""
     # 끊어 읽기 표시(⏸): Azure 는 정확한 쉼(SSML break), 나머지 엔진은 쉼표로 쉬게 한다
     if provider != "azure":
-        text = re.sub(r"\s*\u23f8\s*", ", ", text).strip(", ")
+        text = plain_spoken(text)
         key = cfg.get("gemini_key") or ""
         model = cfg.get("gemini_tts_model") or "gemini-2.5-flash-preview-tts"
         spoken = f"{style.strip()}: {text}" if style.strip() else text
@@ -293,10 +293,23 @@ def synth_one(cfg, provider, voice, text, out_base, speed=1.0, style=""):
 
 # ---------------- Azure 음성 (무료 등급: 한 달 50만 자) ----------------
 
+def plain_spoken(text):
+    """SSML 을 못 쓰는 엔진용: 직접 넣은 쉼(⏸)은 쉼표로, 자동 쉼(⏵)은 없앤다."""
+    text = re.sub(r"\s*\u23f8\s*", ", ", text)
+    return re.sub(r"\s*\u23f5\s*", " ", text).strip(", ")
+
+
 def _azure_body(text):
-    """SSML 본문: 끊어 읽기 표시(⏸)를 0.3초 쉼으로."""
-    parts = [xml_escape(p.strip()) for p in text.split("\u23f8")]
-    return "<break time='300ms'/>".join(p for p in parts if p)
+    """SSML 본문: 직접 넣은 쉼(⏸)은 0.3초, 자동 끊어 읽기(⏵)는 0.18초."""
+    out = []
+    for tok in re.split(r"(\u23f8|\u23f5)", text):
+        if tok == "\u23f8":
+            out.append("<break time='300ms'/>")
+        elif tok == "\u23f5":
+            out.append("<break time='180ms'/>")
+        elif tok.strip():
+            out.append(xml_escape(tok.strip()))
+    return "".join(out)
 
 
 def xml_escape(s):

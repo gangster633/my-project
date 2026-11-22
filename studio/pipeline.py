@@ -205,7 +205,8 @@ def run_voice(p, cfg, ctx, folder, lang="ko", voice=None):
     speed = float(v.get("speed") or 1)
     numbers = bool(v.get("numbers", True)) and lang == "ko"
     for s in sents:
-        s["tts"] = textutil.tts_text(s.get("say") or s["text"], v.get("dictionary", ""), numbers)
+        s["tts"] = textutil.tts_text(s.get("say") or s["text"], v.get("dictionary", ""), numbers,
+                                     auto_pause=v.get("auto_pause", True) and v.get("provider") == "azure")
     # 같은 문장·같은 음성이면 다시 만들지 않는다 (대본 일부만 고쳐도 빠르게)
     vk = voice_key(v) + "|" + (v.get("style") or "")
     jobs = []

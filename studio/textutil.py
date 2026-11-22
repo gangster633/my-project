@@ -193,13 +193,62 @@ _PAUSE_MARK = re.compile(r"\s*(?<![0-9A-Za-z])/(?![0-9A-Za-z/])\s*")
 PAUSE = "\u23f8"  # 음성 합성 직전에 각 음성 엔진의 쉼으로 바뀐다
 
 
+PAUSE_AUTO = "\u23f5"  # 자동 끊어 읽기 (짧은 쉼)
+
+# 사람이 낭독할 때 쉬는 자리: 문장 첫머리 접속어 뒤, 이음말(~는데·~지만·~면서·~려면) 뒤, 첫머리 주제 부분(~에는·~으로는) 뒤
+_DISCOURSE = {"그런데", "그래서", "그러니까", "하지만", "다만", "물론", "반대로", "참고로", "결국", "게다가", "사실", "특히",
+              "즉", "첫째", "둘째", "셋째", "그러면", "이번엔", "이번에는", "만약", "혹시", "아니면", "따라서", "정리하면"}
+_CONNECT = re.compile(r"(는데|은데|ㄴ데|면서|니까|으니|려면|다면|라면|더라도|거나|도록|자마자|는데요|면요|"
+                      r"(?:하|했|았|었|였|겠|이|되|됐|있|없|않|맞|같|싶|좋|많|다|르|지|끓|크|작)지만)$")
+_CONNECT_CAUSE = re.compile(r"(해서|아서|어서|여서|라서)$")  # 짧은 '~어서'는 붙여 읽는 게 자연스러워 길 때만
+_TOPIC = re.compile(r"(에는|에서는|으로는|로는|부터는|까지는|에게는|한테는|보다는|에서도)$")
+
+
+def _nchar(s):
+    return len(re.sub(r"\s", "", s))
+
+
+def auto_phrase(text, mark=PAUSE_AUTO):
+    """긴 문장에 사람처럼 짧게 쉬는 자리를 넣는다 (한 문장에 최대 2곳)."""
+    toks = text.split(" ")
+    if _nchar(text) < 20 or len(toks) < 4:
+        return text
+    cuts = []
+    for i in range(len(toks) - 1):
+        t = toks[i]
+        if re.search(r"[,，/]$", t) or toks[i + 1].startswith(("/", PAUSE, PAUSE_AUTO)) or PAUSE in t:
+            continue
+        left, right = " ".join(toks[:i + 1]), " ".join(toks[i + 1:])
+        w = re.sub(r"[^가-힣0-9]", "", t)
+        ok = False
+        if i == 0 and w in _DISCOURSE and _nchar(right) >= 10:
+            ok = True
+        elif i == 1 and toks[0] == "예를" and w == "들어" and _nchar(right) >= 8:
+            ok = True
+        elif _CONNECT.search(w) and _nchar(left) >= 6 and _nchar(right) >= 8:
+            ok = True
+        elif _CONNECT_CAUSE.search(w) and _nchar(left) >= 8 and _nchar(right) >= 12:
+            ok = True
+        elif _TOPIC.search(w) and not cuts and _nchar(left) >= 4 and _nchar(right) >= 10:
+            ok = True
+        if ok and (not cuts or _nchar(" ".join(toks[cuts[-1] + 1:i + 1])) >= 8):
+            cuts.append(i)
+        if len(cuts) >= 2:
+            break
+    for i in reversed(cuts):
+        toks[i] = f"{toks[i]} {mark}"
+    return " ".join(toks)
+
+
 def strip_pauses(text):
     """자막·글자 수용: 끊어 읽기 표시 '/' 를 없앤다."""
     return re.sub(r"\s{2,}", " ", _PAUSE_MARK.sub(" ", text)).strip()
 
 
-def tts_text(text, dictionary="", numbers=True):
+def tts_text(text, dictionary="", numbers=True, auto_pause=False):
     text = _PAUSE_MARK.sub(f" {PAUSE} ", text)
+    if auto_pause:
+        text = auto_phrase(text)
     text = apply_dictionary(text, dictionary)
     if numbers:
         text = read_numbers(text)

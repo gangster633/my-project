@@ -34,7 +34,7 @@ import prompts  # noqa: E402
 import render  # noqa: E402
 
 APP_NAME = "AI 영상 공방"
-VERSION = "1.3.13"
+VERSION = "1.3.14"
 DATA_DIR = Path(os.environ.get("VIDEO_WORKSHOP_HOME") or (Path(os.environ.get("APPDATA", Path.home())) / "VideoWorkshop"))
 PROJECTS = DATA_DIR / "projects"
 CONFIG = DATA_DIR / "config.json"
@@ -736,7 +736,7 @@ class Handler(BaseHTTPRequestHandler):
             prov, vid = d["provider"], d["id"]
             text = d.get("text") or "안녕하세요. 오늘은 서울 집값이 86주 연속 오른 이야기를 해 볼게요."
             from textutil import tts_text
-            spoken = tts_text(text, d.get("dictionary", ""), True)
+            spoken = tts_text(text, d.get("dictionary", ""), True, auto_pause=d.get("auto_pause", True) and prov == "azure")
             name = re.sub(r"[^\w]", "_", f"{prov}_{vid}")[:60] + f"_{int(time.time())}"
             if prov == "sapi":
                 ai.synth_sapi_batch([(spoken, PREVIEWS / f"{name}.wav")], vid, float(d.get("speed") or 1))

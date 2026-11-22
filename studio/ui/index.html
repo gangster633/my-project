@@ -509,7 +509,8 @@ async function viewVoice() {
         <label class="field"><span>말하기 속도 <b id="spv">${(+v.speed).toFixed(2)}배</b></span><input type="range" id="v_speed" min="0.7" max="1.5" step="0.05" value="${v.speed}"></label>
         <p class="tiny dim">1.0배가 기본이에요. ElevenLabs는 0.7~1.2배까지 반영돼요. 바꾼 뒤에는 음성을 다시 만드세요.</p>
         <label class="field"><span>말투 지시 (Gemini·OpenAI 음성)</span><input id="v_style" value="${esc(v.style)}" placeholder="예: 차분하고 신뢰감 있는 뉴스 앵커처럼, 또렷하게"></label>
-        <label class="row" style="margin-top:10px"><input type="checkbox" id="v_num" ${v.numbers ? "checked" : ""}> 숫자를 한국어로 읽기 (86주 → 팔십육 주, 3명 → 세 명). 자막에는 숫자 그대로</label>
+        <label class="row" style="margin-top:10px"><input type="checkbox" id="v_auto" ${v.auto_pause !== false ? "checked" : ""}> 사람처럼 끊어 읽기 (자동, Azure). 긴 문장에서 "그런데", "~는데", "~지만" 뒤처럼 사람이 쉬는 자리에서 짧게 쉬어요</label>
+        <label class="row" style="margin-top:6px"><input type="checkbox" id="v_num" ${v.numbers ? "checked" : ""}> 숫자를 한국어로 읽기 (86주 → 팔십육 주, 3명 → 세 명). 자막에는 숫자 그대로</label>
         <p class="tiny dim" style="margin:4px 0 0">Azure·Gemini 같은 자연스러운 음성은 숫자를 스스로 잘 읽어요. 어색하면 이 칸을 끄고 다시 만들어 비교해 보세요.</p>
         <label class="field" style="margin-top:10px"><span>발음 사전 (한 줄에 하나, <span class="kbd">글자=읽기</span>)</span><textarea id="v_dict" rows="3" placeholder="KOSPI=코스피&#10;LH=엘에이치&#10;용산구=용산 구">${esc(v.dictionary)}</textarea></label>
         <div class="grid2" style="margin-top:10px">
@@ -552,7 +553,7 @@ async function viewVoice() {
   drawVoices();
 }
 function voiceForm() {
-  return {...state.p.voice, speed: +$("#v_speed").value, style: $("#v_style").value, numbers: $("#v_num").checked, dictionary: $("#v_dict").value,
+  return {...state.p.voice, speed: +$("#v_speed").value, style: $("#v_style").value, numbers: $("#v_num").checked, auto_pause: $("#v_auto").checked, dictionary: $("#v_dict").value,
     gap: +$("#v_gap").value, para_gap: +$("#v_pgap").value, compress: $("#v_comp").checked, min_silence: +$("#v_min").value, keep_silence: +$("#v_keep").value, silence_db: +$("#v_db").value};
 }
 async function saveVoiceForm() { await save({voice: voiceForm()}, true); }
@@ -580,7 +581,7 @@ async function previewVoice(v, btn) {
   btn.textContent = "만드는 중…";
   try {
     const f = voiceForm();
-    const r = await api("/api/voice_preview", {provider: v.provider, id: v.id, speed: f.speed, style: f.style, dictionary: f.dictionary,
+    const r = await api("/api/voice_preview", {provider: v.provider, id: v.id, speed: f.speed, style: f.style, dictionary: f.dictionary, auto_pause: f.auto_pause,
       text: (state.p.audio ? null : null) || (state.p.script ? state.p.script.split(/\n/).find(l => l.trim() && !l.startsWith("#")).slice(0, 90) : "")});
     previewAudio?.pause(); previewAudio = new Audio(r.url + "?token=" + TOKEN); previewAudio.play();
   } catch (e) { fail(e); }
