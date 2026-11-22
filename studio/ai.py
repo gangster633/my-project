@@ -7,6 +7,7 @@
 import base64
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -234,7 +235,9 @@ def synth_sapi_batch(items, voice, rate):
 
 def synth_one(cfg, provider, voice, text, out_base, speed=1.0, style=""):
     """문장 하나를 합성해 파일 경로(.wav/.mp3)를 돌려준다."""
-    if provider == "gemini":
+    # 끊어 읽기 표시(⏸): Azure 는 정확한 쉼(SSML break), 나머지 엔진은 쉼표로 쉬게 한다
+    if provider != "azure":
+        text = re.sub(r"\s*\u23f8\s*", ", ", text).strip(", ")
         key = cfg.get("gemini_key") or ""
         model = cfg.get("gemini_tts_model") or "gemini-2.5-flash-preview-tts"
         spoken = f"{style.strip()}: {text}" if style.strip() else text
@@ -277,7 +280,7 @@ def synth_one(cfg, provider, voice, text, out_base, speed=1.0, style=""):
         rate = round((max(0.5, min(2.0, speed)) - 1.0) * 100)
         lang = "-".join(voice.split("-")[:2]) if voice.count("-") >= 2 else "ko-KR"
         ssml = (f"<speak version='1.0' xml:lang='{lang}'><voice name='{xml_escape(voice)}'>"
-                f"<prosody rate='{rate:+d}%'>{xml_escape(text)}</prosody></voice></speak>")
+                f"<prosody rate='{rate:+d}%'>{_azure_body(text)}</prosody></voice></speak>")
         data = http_json(f"https://{azure_region(cfg)}.tts.speech.microsoft.com/cognitiveservices/v1", None,
                          {"Ocp-Apim-Subscription-Key": cfg.get("azure_speech_key", ""), "Content-Type": "application/ssml+xml",
                           "X-Microsoft-OutputFormat": "riff-24khz-16bit-mono-pcm"},
@@ -289,6 +292,12 @@ def synth_one(cfg, provider, voice, text, out_base, speed=1.0, style=""):
 
 
 # ---------------- Azure 음성 (무료 등급: 한 달 50만 자) ----------------
+
+def _azure_body(text):
+    """SSML 본문: 끊어 읽기 표시(⏸)를 0.3초 쉼으로."""
+    parts = [xml_escape(p.strip()) for p in text.split("\u23f8")]
+    return "<break time='300ms'/>".join(p for p in parts if p)
+
 
 def xml_escape(s):
     return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("'", "&apos;").replace('"', "&quot;")

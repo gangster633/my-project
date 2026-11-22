@@ -530,7 +530,7 @@ async function viewVoice() {
         ${p.audio ? `<div style="margin-top:12px"><div class="row"><b>완성: ${fmt(p.audio.total)}</b><span class="tiny dim">${esc(p.audio.voice.name || p.audio.voice.id)} · ${esc(p.audio.made)}</span></div>
           <audio id="narr" controls style="width:100%;margin-top:6px" src="${fileUrl(p.audio.narration)}"></audio>
           <div class="sents" id="sents">${p.audio.sentences.map((s, i) => `<div data-t="${s.start}" data-e="${s.end}" onclick="seek(${s.start})"><span class="t">${fmt(s.start)}</span><span>${esc(s.text)}</span></div>`).join("")}</div>
-          <p class="tiny dim">문장을 누르면 그 위치부터 들어요. 틀린 발음은 발음 사전에 넣고 다시 만들면 그 문장만 새로 만들어요.</p></div>` : ""}
+          <p class="tiny dim">문장을 누르면 그 위치부터 들어요. 틀린 발음은 발음 사전에 넣고 다시 만들면 그 문장만 새로 만들어요.<br><b>끊어 읽기가 어색하면</b> 대본에서 쉬고 싶은 곳에 <span class="kbd">/</span> 를 넣고 음성을 다시 만드세요. 그 자리에서 잠깐 쉬고, 자막에는 보이지 않아요. 예: 계산만 놓고 보면 / 올해는 20만 원이</p></div>` : ""}
       </div>
     </div>
     <div class="panel"><h2>다국어 음성 (선택)</h2>

@@ -37,7 +37,11 @@ def split_sentences(script):
                 else:
                     merged.append(s)
             for s in _split_long(merged):
-                out.append({"text": s, "para_end": False, "section": title})
+                clean = strip_pauses(s)
+                item = {"text": clean, "para_end": False, "section": title}
+                if clean != s:
+                    item["say"] = s  # 음성용: 끊어 읽기 표시를 살린 원문
+                out.append(item)
             if out:
                 out[-1]["para_end"] = True
     return out
@@ -61,8 +65,8 @@ def _split_long(sentences, limit=110):
 
 
 def plain_text(script):
-    """소제목 줄을 뺀 낭독 본문."""
-    return "\n\n".join(body for _, body in split_sections(script))
+    """소제목 줄을 뺀 낭독 본문 (끊어 읽기 표시 '/' 는 뺀다)."""
+    return "\n\n".join(strip_pauses(body) for _, body in split_sections(script))
 
 
 def char_count(script):
@@ -152,7 +156,10 @@ def read_numbers(text):
             except ValueError:
                 return m.group(0)
             follow = tail + text[m.end():m.end() + 2]
-            if 0 < n < 100 and any(follow.startswith(c.strip()) for c in _NATIVE_COUNTERS) and not follow.startswith("시간대"):
+            native_ok = (0 < n < 100 and any(follow.startswith(c.strip()) for c in _NATIVE_COUNTERS)
+                         and not follow.startswith(("시간대", "개월"))          # 3개월 -> 삼 개월
+                         and not (follow.startswith("대") and n % 10 == 0))    # 30대 -> 삼십 대 (나이대)
+            if native_ok:
                 spoken = "스무" if n == 20 else native(n)
             else:
                 spoken = sino(n)
@@ -166,6 +173,8 @@ def read_numbers(text):
         if tail and not sp and tail[:1] not in ("만", "억", "조", "천", "백", "십", "여", "월", "일"):
             sp = " "
         return spoken + sp + tail
+    # 분수: 1/3 -> 삼분의 일
+    text = re.sub(r"(?<![\d/])(\d{1,3})/(\d{1,3})(?![\d/])", lambda m: f"{sino(int(m.group(2)))}분의 {sino(int(m.group(1)))}", text)
     return _NUM.sub(rep, text)
 
 
@@ -179,7 +188,18 @@ def apply_dictionary(text, rules):
     return text
 
 
+# 대본에서 끊어 읽을 곳 표시: 단어 사이의 '/' (1/3, km/h 처럼 숫자·영문 사이는 제외)
+_PAUSE_MARK = re.compile(r"\s*(?<![0-9A-Za-z])/(?![0-9A-Za-z/])\s*")
+PAUSE = "\u23f8"  # 음성 합성 직전에 각 음성 엔진의 쉼으로 바뀐다
+
+
+def strip_pauses(text):
+    """자막·글자 수용: 끊어 읽기 표시 '/' 를 없앤다."""
+    return re.sub(r"\s{2,}", " ", _PAUSE_MARK.sub(" ", text)).strip()
+
+
 def tts_text(text, dictionary="", numbers=True):
+    text = _PAUSE_MARK.sub(f" {PAUSE} ", text)
     text = apply_dictionary(text, dictionary)
     if numbers:
         text = read_numbers(text)
