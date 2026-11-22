@@ -1,0 +1,1029 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 영상 공방</title>
+<style>
+:root {
+  --bg: #0e1116; --panel: #161a22; --panel2: #1c212b; --line: #2a303c; --text: #e7eaf0; --muted: #96a0b2; --dim: #6b7486;
+  --accent: #22c3e6; --accent-ink: #04222b; --accent-soft: #0f2f39; --ok: #34d399; --warn: #fbbf24; --bad: #f87171; --side: #0a0d12;
+}
+:root[data-theme="light"] {
+  --bg: #f3f5f8; --panel: #fff; --panel2: #f6f7fa; --line: #dfe3ea; --text: #1a2030; --muted: #5b6475; --dim: #8a93a3;
+  --accent: #0891b2; --accent-ink: #fff; --accent-soft: #e0f5fa; --side: #121722;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.55 -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; display: flex; }
+button, input, select, textarea { font: inherit; color: inherit; }
+input, select, textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel2); }
+textarea { resize: vertical; }
+input[type=checkbox], input[type=radio] { width: auto; accent-color: var(--accent); }
+input[type=range] { padding: 0; accent-color: var(--accent); }
+input[type=color] { padding: 2px; height: 36px; width: 56px; }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+button { padding: 8px 16px; border: 0; border-radius: 8px; background: var(--accent); color: var(--accent-ink); font-weight: 700; cursor: pointer; white-space: nowrap; }
+button.ghost { background: var(--panel2); color: var(--text); border: 1px solid var(--line); font-weight: 600; }
+button.link { background: none; color: var(--accent); padding: 4px 6px; font-weight: 600; }
+button.danger { background: none; color: var(--bad); border: 1px solid var(--line); }
+button.sm { padding: 5px 10px; font-size: 12.5px; }
+button:disabled { opacity: .45; cursor: default; }
+a { color: var(--accent); }
+.dim { color: var(--muted); } .tiny { font-size: 12px; } .ok { color: var(--ok); } .warn { color: var(--warn); } .bad { color: var(--bad); }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.row.end { align-items: flex-end; }
+.grow { flex: 1; min-width: 0; }
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.field > span { font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+@media (max-width: 1000px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
+
+aside { width: 236px; flex: none; background: var(--side); color: #c9d0db; display: flex; flex-direction: column; padding: 14px 12px; }
+.brand { display: flex; gap: 10px; align-items: center; padding: 2px 6px 14px; cursor: pointer; }
+.brand .ico { width: 34px; height: 34px; border-radius: 10px; background: linear-gradient(135deg, #22c3e6, #8b5cf6); display: grid; place-items: center; font-weight: 900; color: #fff; }
+.brand b { display: block; color: #fff; font-size: 15px; } .brand small { color: #7b8597; font-size: 11.5px; }
+.nav button { display: flex; width: 100%; background: none; color: #c9d0db; font-weight: 500; padding: 8px 10px; border-radius: 8px; text-align: left; gap: 8px; }
+.nav button[aria-current] { background: #1f2633; color: #fff; }
+.proj-name { margin: 14px 6px 6px; font-size: 12px; color: #7b8597; } .proj-name b { display: block; color: #fff; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.steps { list-style: none; margin: 4px 0 0; padding: 0; flex: 1; overflow: auto; }
+.steps li { position: relative; }
+.steps li::before { content: ""; position: absolute; left: 19px; top: 30px; bottom: -6px; width: 2px; background: #252c38; }
+.steps li:last-child::before { display: none; }
+.steps button { display: flex; align-items: center; gap: 10px; width: 100%; background: none; color: #8d96a8; font-weight: 500; padding: 7px 8px; border-radius: 10px; text-align: left; }
+.steps button .dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #39414f; display: grid; place-items: center; font-size: 11px; flex: none; background: var(--side); position: relative; z-index: 1; }
+.steps button.done .dot { background: var(--ok); border-color: var(--ok); color: #05261a; }
+.steps button[aria-current] { background: #13303a; color: #fff; outline: 1px solid #1f6f82; }
+.steps button[aria-current] .dot { border-color: var(--accent); }
+.steps small { display: block; font-size: 10.5px; letter-spacing: .06em; color: #5f6878; }
+.steps .sub { font-size: 11px; color: #6b7486; }
+.side-foot { border-top: 1px solid #1f2633; padding-top: 10px; display: flex; gap: 6px; }
+.side-foot button { flex: 1; background: none; border: 1px solid #252c38; color: #8d96a8; font-weight: 500; padding: 6px; font-size: 12px; }
+
+main { flex: 1; min-width: 0; overflow: auto; padding: 18px 28px 80px; }
+.crumb { font-size: 12px; color: var(--muted); }
+h1 { font-size: 23px; margin: 2px 0 4px; } h2 { font-size: 16px; margin: 0 0 10px; } h3 { font-size: 14px; margin: 0 0 8px; }
+.lead { color: var(--muted); margin: 0 0 16px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin-bottom: 14px; }
+.panel.tight { padding: 12px 14px; }
+.hint { background: var(--accent-soft); border-radius: 10px; padding: 10px 14px; font-size: 13px; margin: 8px 0; }
+.notice { border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; background: #3a2a0a; color: #fde68a; }
+:root[data-theme="light"] .notice { background: #fff6dd; color: #8a5a00; }
+.pill { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 11.5px; background: var(--panel2); border: 1px solid var(--line); color: var(--muted); }
+.pill.ok { color: var(--ok); border-color: #1d5c47; } .pill.acc { color: var(--accent); border-color: #1f6f82; }
+.next { display: flex; justify-content: space-between; align-items: center; margin-top: 18px; }
+
+/* 진행 표시 */
+#jobbar { position: fixed; right: 18px; bottom: 18px; width: 380px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; box-shadow: 0 12px 32px #0008; z-index: 50; }
+#jobbar[hidden] { display: none; }
+.bar { height: 8px; background: var(--panel2); border-radius: 99px; overflow: hidden; margin: 8px 0 6px; }
+.bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), #8b5cf6); width: 0; transition: width .4s; }
+.bar.ind i { width: 35% !important; animation: slide 1.3s infinite ease-in-out; }
+@keyframes slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }
+
+/* 카드 목록 */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; cursor: pointer; text-align: left; padding: 0; color: var(--text); font-weight: 400; white-space: normal; }
+.card:hover { border-color: #3a4456; }
+.card .th { aspect-ratio: 16/9; background: var(--panel2) center/cover no-repeat; display: grid; place-items: center; color: var(--dim); font-size: 12px; }
+.card .bd { padding: 10px 12px; } .card b { display: block; }
+.vc { border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: var(--panel); cursor: pointer; text-align: left; color: var(--text); font-weight: 400; white-space: normal; position: relative; }
+.vc[aria-selected="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); background: var(--accent-soft); }
+.vc b { display: block; } .vc .star { position: absolute; right: 8px; top: 6px; background: none; color: var(--dim); padding: 2px 4px; font-size: 15px; }
+.vc .star.on { color: var(--warn); }
+.vgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; max-height: 420px; overflow: auto; padding: 2px; }
+.tabs { display: flex; gap: 4px; margin-bottom: 10px; flex-wrap: wrap; }
+.tabs button { background: var(--panel2); color: var(--muted); border: 1px solid var(--line); font-weight: 600; padding: 5px 12px; font-size: 13px; }
+.tabs button[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.style-card .th { aspect-ratio: 16/9; display: grid; place-items: center; font-size: 13px; font-weight: 700; color: #fff; text-shadow: 0 1px 4px #0009; background-size: cover; background-position: center; }
+.sents { max-height: 300px; overflow: auto; font-size: 13px; }
+.sents div { padding: 4px 8px; border-radius: 6px; cursor: pointer; display: flex; gap: 10px; }
+.sents div:hover { background: var(--panel2); }
+.sents div.on { background: var(--accent-soft); }
+.sents .t { color: var(--dim); font-variant-numeric: tabular-nums; flex: none; width: 46px; }
+.check { display: flex; gap: 8px; padding: 6px 0; border-bottom: 1px dashed var(--line); font-size: 13px; }
+.check:last-child { border: 0; }
+
+/* 장면 */
+.scene { display: grid; grid-template-columns: 210px 1fr; gap: 14px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; margin-bottom: 10px; background: var(--panel); }
+.scene .media { aspect-ratio: 16/9; border-radius: 8px; background: var(--panel2) center/cover no-repeat; display: grid; place-items: center; color: var(--dim); font-size: 12px; position: relative; overflow: hidden; border: 1px dashed var(--line); }
+.scene .media video { width: 100%; height: 100%; object-fit: cover; }
+.scene .media.drag { outline: 2px dashed var(--accent); }
+.scene .media .badge { position: absolute; left: 6px; top: 6px; }
+.scene textarea { font-size: 13px; }
+.scene .meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-size: 12.5px; }
+.scene .meta select { width: auto; padding: 4px 6px; font-size: 12.5px; }
+.igrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.icard { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--panel); }
+.icard .media { aspect-ratio: 16/9; background: var(--panel2) center/cover no-repeat; display: grid; place-items: center; color: var(--dim); font-size: 12px; position: relative; }
+.icard .media video { width: 100%; height: 100%; object-fit: cover; }
+.icard .media.drag { outline: 3px dashed var(--accent); outline-offset: -3px; }
+.icard .bd { padding: 8px 10px; font-size: 12.5px; }
+.icard .bd p { margin: 0 0 6px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.icard .num { position: absolute; left: 6px; top: 6px; background: #000a; color: #fff; padding: 1px 7px; border-radius: 99px; font-size: 11px; }
+
+/* 자막 미리보기 */
+.preview { position: relative; aspect-ratio: 16/9; background: #222 center/cover no-repeat; border-radius: 10px; overflow: hidden; user-select: none; container-type: inline-size; }
+.preview.v { aspect-ratio: 9/16; max-width: 300px; }
+.preview .sub { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; font-weight: 700; padding: .1em .45em; line-height: 1.35; }
+.preview .logo { position: absolute; cursor: move; }
+.presets { display: flex; flex-wrap: wrap; gap: 8px; }
+.presets button { background: #111; border: 1px solid var(--line); padding: 6px 12px; font-size: 13px; font-weight: 800; -webkit-text-stroke: 0 !important; text-shadow: 0 1px 2px #000; }
+video.player { width: 100%; border-radius: 12px; background: #000; max-height: 70vh; }
+.copybox { position: relative; }
+.copybox textarea { padding-right: 70px; }
+.copybox button { position: absolute; right: 8px; top: 8px; }
+dialog { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 14px; padding: 20px; width: min(760px, 92vw); }
+dialog::backdrop { background: #000a; }
+.kbd { font-family: ui-monospace, Consolas, monospace; font-size: 12px; background: var(--panel2); padding: 1px 6px; border-radius: 4px; }
+.empty { text-align: center; padding: 40px 10px; color: var(--muted); }
+</style>
+</head>
+<body>
+<aside>
+  <div class="brand" onclick="go('home')"><div class="ico">공</div><div><b>AI 영상 공방</b><small>기사 한 줄로 유튜브 영상까지 · v__VERSION__</small></div></div>
+  <div class="nav">
+    <button data-nav="home" onclick="go('home')">🏠 모든 프로젝트</button>
+    <button data-nav="settings" onclick="go('settings')">⚙️ 설정 · API 키</button>
+    <button data-nav="guide" onclick="go('guide')">📘 사용법</button>
+  </div>
+  <div id="projnav" hidden>
+    <div class="proj-name">지금 프로젝트<b id="pname"></b></div>
+    <ul class="steps" id="steps"></ul>
+  </div>
+  <div style="flex:1" id="spacer"></div>
+  <div class="side-foot">
+    <button onclick="toggleTheme()">🌓 화면</button>
+    <button onclick="quitApp()">⏻ 종료</button>
+  </div>
+</aside>
+<main id="main"></main>
+<div id="jobbar" hidden>
+  <div class="row"><b id="jobtitle" class="grow">작업 중</b><button class="sm danger" id="jobcancel" onclick="cancelJob()">취소</button></div>
+  <div class="bar" id="jobbarbar"><i id="jobfill"></i></div>
+  <div class="tiny dim" id="jobmsg"></div>
+</div>
+<dialog id="dlg"></dialog>
+
+<script>
+const TOKEN = "__TOKEN__";
+const STEPS = [
+  ["script", "SCRIPT", "대본"], ["voice", "VOICE", "음성"], ["style", "STYLE", "화풍 · 캐릭터"], ["storyboard", "STORYBOARD", "스토리보드"],
+  ["image", "IMAGE", "이미지"], ["video", "VIDEO", "영상"], ["export", "EXPORT", "완성 · 업로드 준비"],
+];
+const MOTIONS = {zoom_in: "줌 인", zoom_out: "줌 아웃", pan_left: "← 이동", pan_right: "→ 이동", pan_up: "↑ 이동", pan_down: "↓ 이동", still: "정지"};
+const TRANS = {cut: "컷", fade: "페이드", dissolve: "디졸브", fadeblack: "검은 화면 경유", slideleft: "밀기 ←", slideright: "밀기 →", smoothleft: "부드럽게 ←", wipeleft: "닦아내기", circleopen: "원형 열기", zoomin: "줌 전환"};
+const SUB_PRESETS = [
+  {name: "정보 신뢰", css: "background:#000c;color:#fff", v: {color: "#ffffff", accent: "#ffd400", box: true, box_color: "#000000", box_opacity: 0.65, bold: true, size: 17, position: "bottom"}},
+  {name: "노랑 강조", css: "color:#ffe400;-webkit-text-stroke:1px #000", v: {color: "#ffe400", accent: "#ffffff", box: false, outline: 2.2, outline_color: "#000000", bold: true, size: 19, position: "bottom"}},
+  {name: "감성 브이로그", css: "color:#fff;-webkit-text-stroke:.5px #333", v: {color: "#ffffff", accent: "#ffd6e7", box: false, outline: 1.0, outline_color: "#333333", bold: false, size: 16, position: "bottom"}},
+  {name: "공포 몰입", css: "color:#ff3b3b;background:#000", v: {color: "#ff4d4d", accent: "#ffffff", box: true, box_color: "#000000", box_opacity: 0.85, bold: true, size: 17, position: "bottom"}},
+  {name: "예능 빨간 띠", css: "background:#e11d48;color:#fff", v: {color: "#ffffff", accent: "#ffe400", box: true, box_color: "#e11d48", box_opacity: 0.95, bold: true, size: 18, position: "bottom"}},
+  {name: "시니어 큰 글씨", css: "background:#000;color:#fff;font-size:15px", v: {color: "#ffffff", accent: "#7dd3fc", box: true, box_color: "#000000", box_opacity: 0.8, bold: true, size: 22, position: "bottom", max_chars: 18}},
+  {name: "이슈 채널", css: "color:#fff;-webkit-text-stroke:1px #000", v: {color: "#ffffff", accent: "#ffe066", box: false, outline: 2.6, outline_color: "#000000", bold: true, size: 20, position: "bottom", margin: 0.07}},
+  {name: "미니멀", css: "color:#fff;text-shadow:0 1px 3px #000", v: {color: "#ffffff", accent: "#ffffff", box: false, outline: 0.6, outline_color: "#000000", bold: false, size: 15, position: "bottom", highlight_numbers: false}},
+  {name: "가운데 크게", css: "color:#fff;-webkit-text-stroke:1px #000;background:#0006", v: {color: "#ffffff", accent: "#ffe400", box: false, outline: 2.5, outline_color: "#000000", bold: true, size: 22, position: "center"}},
+];
+let state = {view: "home", pid: null, p: null, info: null, cfg: null, voices: null, voiceTab: "ko", audioEl: null, jobWatch: null};
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+const fmt = t => { t = Math.max(0, Math.round(t || 0)); const h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), s = t % 60; return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(s).padStart(2, "0"); };
+const fileUrl = (rel, dl) => rel ? `/files/${state.pid}/${encodeURI(rel)}?token=${TOKEN}${dl ? "&download=" + encodeURIComponent(dl) : ""}&v=${Date.now() % 1e7}` : "";
+const stripCount = s => (s || "").split("\n").filter(l => !/^\s*#/.test(l)).join("").replace(/\s/g, "").length;
+
+async function api(path, body) {
+  const opt = {headers: {"X-Token": TOKEN}};
+  if (body !== undefined) { opt.method = "POST"; opt.body = JSON.stringify(body); opt.headers["Content-Type"] = "application/json"; }
+  const r = await fetch(path, opt);
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || ("오류 " + r.status));
+  return j;
+}
+async function upload(file, params) {
+  const q = new URLSearchParams(params).toString();
+  const r = await fetch(`/api/upload?${q}`, {method: "POST", headers: {"X-Token": TOKEN, "X-Filename": encodeURIComponent(file.name)}, body: file});
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || "올리기 실패");
+  return j;
+}
+function toast(msg, bad) {
+  const d = document.createElement("div");
+  d.textContent = msg;
+  d.style.cssText = `position:fixed;left:50%;top:18px;transform:translateX(-50%);background:${bad ? "#7f1d1d" : "#0f3b46"};color:#fff;padding:10px 18px;border-radius:10px;z-index:99;max-width:80vw;box-shadow:0 8px 24px #0007`;
+  document.body.appendChild(d);
+  setTimeout(() => d.remove(), bad ? 6000 : 2600);
+}
+const fail = e => toast(e.message || String(e), true);
+function copy(text) { navigator.clipboard.writeText(text).then(() => toast("복사했어요")).catch(() => { const t = document.createElement("textarea"); t.value = text; document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); toast("복사했어요"); }); }
+function toggleTheme() { const r = document.documentElement; const n = r.dataset.theme === "light" ? "dark" : "light"; r.dataset.theme = n; try { localStorage.vwTheme = n; } catch (e) {} }
+try { if (localStorage.vwTheme) document.documentElement.dataset.theme = localStorage.vwTheme; } catch (e) {}
+async function quitApp() { if (confirm("프로그램을 종료할까요?")) { await api("/api/quit", {}).catch(() => {}); document.body.innerHTML = "<div class='empty' style='margin:auto'>종료했어요. 이 탭을 닫아도 됩니다.</div>"; } }
+setInterval(() => api("/api/ping").catch(() => {}), 30000);
+
+// ---------------- 이동 ----------------
+async function go(view, pid) {
+  if (pid) state.pid = pid;
+  state.view = view;
+  document.querySelectorAll("[data-nav]").forEach(b => b.toggleAttribute("aria-current", b.dataset.nav === view));
+  if (["home", "settings", "guide"].includes(view)) { $("#projnav").hidden = true; $("#spacer").hidden = false; }
+  if (!state.cfg) state.cfg = await api("/api/config");
+  if (view === "home") return viewHome();
+  if (view === "settings") return viewSettings();
+  if (view === "guide") return viewGuide();
+  await loadProject();
+  render();
+}
+async function loadProject() {
+  const r = await api("/api/project?id=" + state.pid);
+  state.p = r.project; state.info = r;
+  $("#projnav").hidden = false; $("#spacer").hidden = true;
+  $("#pname").textContent = state.p.name;
+  drawSteps();
+}
+function stepDone(k) {
+  const p = state.p;
+  const sb = p.storyboard;
+  return {script: !!p.script, voice: !!p.audio, style: !!p.style.chosen, storyboard: !!sb,
+    image: !!sb && sb.scenes.every(s => s.image || s.video), video: !!p.outputs.video, export: !!(p.meta && p.outputs.thumbs)}[k];
+}
+function stepSub(k) {
+  const p = state.p;
+  if (k === "script" && p.script) return stripCount(p.script).toLocaleString() + "자";
+  if (k === "voice" && p.audio) return fmt(p.audio.total) + " · " + (p.audio.voice.name || p.audio.voice.id);
+  if (k === "style" && p.style.chosen) return (state.cfg.styles.find(s => s.id === p.style.id) || {}).name || "직접 입력";
+  if (k === "storyboard" && p.storyboard) return p.storyboard.scenes.length + "컷";
+  if (k === "image" && p.storyboard) return p.storyboard.scenes.filter(s => s.image || s.video).length + "/" + p.storyboard.scenes.length;
+  if (k === "video" && p.outputs.video) return fmt(p.outputs.video.seconds);
+  return "";
+}
+function drawSteps() {
+  $("#steps").innerHTML = STEPS.map(([k, en, ko], i) => `<li><button class="${stepDone(k) ? "done" : ""}" ${state.view === k ? "aria-current" : ""} onclick="go('${k}')">
+    <span class="dot">${stepDone(k) ? "✓" : i + 1}</span><span><small>${en}</small>${ko} <span class="sub">${esc(stepSub(k))}</span></span></button></li>`).join("");
+}
+function render() {
+  drawSteps();
+  const v = {script: viewScript, voice: viewVoice, style: viewStyle, storyboard: viewStoryboard, image: viewImage, video: viewVideo, export: viewExport}[state.view];
+  if (v) v();
+}
+async function save(fields, quiet) {
+  await api("/api/project/save", {id: state.pid, fields});
+  Object.assign(state.p, fields);
+  if (!quiet) toast("저장했어요");
+}
+function header(k, desc) {
+  const i = STEPS.findIndex(s => s[0] === k);
+  const le = state.p.last_error;
+  const errBox = le ? `<div class="notice" style="background:#3b1111;color:#fecaca">⚠ 마지막 작업(${esc(le.step)})이 실패했어요 · ${esc(le.at)}<br><span class="tiny" style="word-break:break-all">${esc(le.message).slice(0, 600)}</span><br><span class="tiny">이 문구를 캡처해서 알려 주시면 원인을 찾을 수 있어요.</span></div>` : "";
+  return errBox + `<div class="crumb"><a href="#" onclick="go('home');return false">모든 프로젝트</a> / ${esc(state.p.name)} · ${i + 1}/7</div><h1>${STEPS[i][2]}</h1><p class="lead">${desc}</p>`;
+}
+function nextBtn(k) {
+  const i = STEPS.findIndex(s => s[0] === k);
+  const prev = STEPS[i - 1], next = STEPS[i + 1];
+  return `<div class="next">${prev ? `<button class="ghost" onclick="go('${prev[0]}')">← ${prev[2]}</button>` : "<span></span>"}${next ? `<button onclick="go('${next[0]}')">다음: ${next[2]} →</button>` : ""}</div>`;
+}
+const manual = () => (state.cfg.settings.text_provider || "claude") === "manual";
+const providerName = () => ({claude: "Claude", openai: "OpenAI", gemini: "Gemini", manual: "직접 붙여넣기"})[state.cfg.settings.text_provider || "claude"];
+
+// AI 단계 버튼: API 모드는 실행, 직접 붙여넣기 모드는 지시문 복사 → 답 붙여넣기
+function aiButton(step, label, opts, cls) {
+  const o = esc(JSON.stringify(opts || {}));
+  if (manual()) return `<button class="${cls || ""}" onclick='manualStep("${step}", ${o})'>${label} (지시문 복사)</button>`;
+  return `<button class="${cls || ""}" onclick='runStep("${step.split(":")[0]}", ${o})'>${label}</button>`;
+}
+async function manualStep(step, opts) {
+  if (step.startsWith("translate")) step = "translate:" + opts.lang;
+  const {prompt} = await api(`/api/prompt?id=${state.pid}&step=${encodeURIComponent(step)}`).catch(fail) || {};
+  if (!prompt) return;
+  copy(prompt);
+  const d = $("#dlg");
+  d.innerHTML = `<h2>직접 붙여넣기</h2>
+    <ol class="dim" style="margin:0 0 10px;padding-left:18px"><li>지시문을 복사했어요. Claude.ai, ChatGPT, Gemini 같은 AI 채팅에 붙여 넣으세요.</li>
+    <li>AI의 답을 <b>전부</b> 복사해 아래에 붙여 넣고 [넣기]를 누르세요.</li></ol>
+    <details><summary class="dim tiny">지시문 보기</summary><textarea rows="6" readonly>${esc(prompt)}</textarea><button class="sm ghost" onclick="copy(this.previousElementSibling.value)">다시 복사</button></details>
+    <textarea id="pasted" rows="12" placeholder="AI 답을 여기에 붙여 넣기" style="margin-top:10px"></textarea>
+    <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="ghost" onclick="dlg.close()">닫기</button><button id="pastebtn">넣기</button></div>`;
+  d.showModal();
+  $("#pastebtn").onclick = async () => {
+    try { await api("/api/import", {id: state.pid, step, text: $("#pasted").value}); d.close(); await loadProject(); render(); toast("넣었어요"); } catch (e) { fail(e); }
+  };
+}
+async function runStep(step, opts) {
+  try { await api("/api/run", {id: state.pid, step, opts: opts || {}}); watchJob(); } catch (e) { fail(e); }
+}
+function watchJob() {
+  if (state.jobWatch) return;
+  $("#jobbar").hidden = false;
+  const tick = async () => {
+    let j;
+    try { j = await api("/api/job"); } catch (e) { state.jobWatch = setTimeout(tick, 2000); return; }
+    $("#jobtitle").textContent = j.running ? (j.message || "작업 중").replace(/\s*\(.*$/, "") : (j.error ? "실패" : j.message);
+    $("#jobmsg").textContent = j.error || j.message;
+    $("#jobmsg").className = "tiny " + (j.error ? "bad" : "dim");
+    const pct = j.total ? Math.round(j.done / j.total * 100) : 0;
+    $("#jobbarbar").classList.toggle("ind", j.running && !j.total);
+    $("#jobfill").style.width = (j.running ? pct : 100) + "%";
+    $("#jobcancel").hidden = !j.running;
+    if (j.running) { state.jobWatch = setTimeout(tick, 900); return; }
+    state.jobWatch = null;
+    if (j.error) toast(j.error, true); else toast(j.message === "완료" ? "완료했어요" : j.message);
+    setTimeout(() => { if (!state.jobWatch) $("#jobbar").hidden = true; }, j.error ? 12000 : 2500);
+    if (j.step === "style_examples") state.cfg = await api("/api/config");
+    if (state.pid === j.pid && !["home", "settings", "guide"].includes(state.view)) { await loadProject(); render(); }
+    else if (state.view === "home") viewHome();
+  };
+  tick();
+}
+async function cancelJob() { await api("/api/cancel", {}); toast("취소를 요청했어요. 지금 하던 일까지만 마치고 멈춰요."); }
+
+// ---------------- 홈 ----------------
+async function viewHome() {
+  const {projects} = await api("/api/projects");
+  const c = state.cfg;
+  const keys = c.keys;
+  const noKeys = !keys.anthropic_key && !keys.openai_key && !keys.gemini_key;
+  $("#main").innerHTML = `
+    <h1>무엇을 영상으로 만들까요?</h1>
+    <p class="lead">기사 링크나 주제 하나로 대본, 음성, 그림, 자막이 들어간 유튜브 롱폼과 쇼츠까지 만들어요.</p>
+    ${!c.ffmpeg ? `<div class="notice">FFmpeg를 찾지 못했습니다. 배포판 폴더의 tools 안에 ffmpeg.exe가 있어야 영상을 만들 수 있어요.</div>` : ""}
+    ${noKeys && (c.settings.text_provider || "claude") !== "manual" ? `<div class="notice">아직 AI 키가 없어요. <a href="#" onclick="go('settings');return false">설정</a>에서 키를 넣거나, 키 없이 쓰려면 글 AI를 "직접 붙여넣기"로 바꾸세요.</div>` : ""}
+    <div class="panel">
+      <div class="grid2">
+        <label class="field"><span>주제 또는 제목</span><input id="n_topic" placeholder="예: 서울 집값 86주 연속 상승, 강남3구 이어 용산도 하락 전환"></label>
+        <label class="field"><span>기사 링크 (선택, 사실 자료로 씀)</span><input id="n_url" placeholder="https://n.news.naver.com/..."></label>
+      </div>
+      <div class="row end" style="margin-top:10px">
+        <label class="field"><span>채널 성격</span><select id="n_cat">${c.categories.map(x => `<option ${x === (c.settings.default_category || "경제") ? "selected" : ""}>${esc(x)}</option>`).join("")}</select></label>
+        <label class="field"><span>분량</span><select id="n_min">${[1, 3, 5, 8, 10, 15, 20, 30].map(m => `<option value="${m}" ${m === 10 ? "selected" : ""}>${m}분</option>`).join("")}</select></label>
+        <div class="grow"></div>
+        <label class="row tiny dim" title="키가 있어야 해요"><input type="checkbox" id="n_auto"> 원클릭 자동 제작 (대본→사실 대조→음성→그림→영상→쇼츠·썸네일)</label>
+        <button onclick="newProject()">영상 만들기 시작</button>
+      </div>
+    </div>
+    <h2 style="margin-top:22px">내 프로젝트 <span class="dim tiny">${projects.length}개</span></h2>
+    ${projects.length ? `<div class="cards">${projects.map(p => `<div class="card" onclick="go('${p.step}','${p.id}')">
+        <div class="th" style="${p.thumb ? `background-image:url('/files/${p.id}/${encodeURI(p.thumb)}?token=${TOKEN}')` : ""}">${p.thumb ? "" : "그림 없음"}</div>
+        <div class="bd"><b>${esc(p.name)}</b><div class="tiny dim">${esc(p.category)} · ${p.chars.toLocaleString()}자${p.seconds ? " · " + fmt(p.seconds) : ""}${p.scenes ? " · " + p.scenes + "컷" : ""}</div>
+        <div class="tiny dim">${esc(p.updated || "")}</div>
+        <div class="row tiny" style="margin-top:6px;gap:4px">${p.done ? '<span class="pill ok">영상 완성</span>' : `<span class="pill acc">${(STEPS.find(s => s[0] === p.step) || [0, 0, ""])[2]} 단계</span>`}<span class="grow"></span>
+        <button class="link sm" onclick="event.stopPropagation();dupProject('${p.id}')">복제</button><button class="link sm" style="color:var(--bad)" onclick="event.stopPropagation();delProject('${p.id}','${esc(p.name)}')">삭제</button></div></div></div>`).join("")}</div>`
+      : `<div class="empty panel">아직 프로젝트가 없어요. 위에서 첫 영상을 시작해 보세요.</div>`}`;
+}
+async function newProject() {
+  const topic = $("#n_topic").value.trim(), url = $("#n_url").value.trim();
+  if (!topic && !url) return toast("주제나 기사 링크를 넣어 주세요", true);
+  let source_text = "", name = topic;
+  if (url) {
+    toast("기사 가져오는 중…");
+    try { const a = await api("/api/fetch_url", {url}); source_text = (a.title ? a.title + "\n\n" : "") + a.text; name = name || a.title; } catch (e) { fail(e); }
+  }
+  const {id} = await api("/api/project/new", {name: (name || "새 영상").slice(0, 60), category: $("#n_cat").value, topic: topic || name, source_url: url, source_text, minutes: +$("#n_min").value});
+  state.pid = id;
+  if ($("#n_auto").checked) {
+    if (manual()) { toast("직접 붙여넣기 모드에서는 대본부터 차례로 진행해요", true); return go("script", id); }
+    await go("script", id);
+    if (!state.p.voice.provider) { toast("자동 제작 전에 음성을 하나 골라 주세요", true); return go("voice"); }
+    return runStep("auto", {});
+  }
+  go("script", id);
+}
+async function delProject(id, name) { if (confirm(`'${name}' 프로젝트를 지울까요? 그림과 영상도 함께 지워집니다.`)) { await api("/api/project/delete", {id}).catch(fail); viewHome(); } }
+async function dupProject(id) { await api("/api/project/duplicate", {id}).catch(fail); viewHome(); }
+
+// ---------------- 1. 대본 ----------------
+function viewScript() {
+  const p = state.p, info = state.info;
+  const tr = Object.keys(p.translations || {});
+  $("#main").innerHTML = header("script", (manual() ? "주제와 자료를 넣고 지시문을 복사해 AI 채팅에 붙여 넣으면, 시청 지속률을 생각한 대본을 받아 올 수 있어요." : `주제와 자료를 넣으면 ${providerName()}가 시청 지속률을 생각한 대본을 써요.`) + " 숫자는 그대로 쓰고, 음성에서는 자동으로 한국어로 읽어요.") + `
+    <div class="panel">
+      <div class="grid2">
+        <label class="field"><span>주제 / 소재</span><input id="s_topic" value="${esc(p.topic)}" placeholder="예: 조선시대 구미호 설화"></label>
+        <div class="field"><span>기사 링크</span><div class="row"><input class="grow" id="s_url" value="${esc(p.source_url)}" placeholder="https://..." style="flex:1"><button class="ghost" onclick="fetchUrl()">본문 가져오기</button></div></div>
+      </div>
+      <details ${p.source_text ? "" : ""} style="margin-top:10px"><summary class="dim">참고 자료 (사실 확인용) · ${(p.source_text || "").length.toLocaleString()}자</summary>
+        <textarea id="s_src" rows="8" placeholder="기사 본문, 메모, 통계 등을 붙여 넣으면 대본이 이 안의 사실만 써요">${esc(p.source_text)}</textarea></details>
+      <div class="row end" style="margin-top:10px">
+        <label class="field"><span>채널 성격</span><select id="s_cat">${state.cfg.categories.map(x => `<option ${x === p.category ? "selected" : ""}>${esc(x)}</option>`).join("")}</select></label>
+        <label class="field"><span>분량</span><select id="s_min">${[1, 3, 5, 8, 10, 15, 20, 30, 40].map(m => `<option value="${m}" ${m == p.minutes ? "selected" : ""}>${m}분</option>`).join("")}</select></label>
+        <label class="field" style="width:140px"><span>글자수 직접(선택)</span><input id="s_chars" type="number" value="${p.chars || ""}" placeholder="${info.target_chars}"></label>
+        <label class="field"><span>구독 부탁</span><select id="s_cta"><option value="end" ${p.cta === "end" ? "selected" : ""}>끝에 한 번</option><option value="early" ${p.cta === "early" ? "selected" : ""}>도입부 + 끝</option><option value="none" ${p.cta === "none" ? "selected" : ""}>넣지 않음</option></select></label>
+      </div>
+      <label class="field" style="margin-top:10px"><span>추가 요청 (선택)</span><input id="s_note" value="${esc(p.tone_note)}" placeholder="예: 30~40대 직장인 눈높이로, 비유를 많이"></label>
+      <div class="row" style="margin-top:12px"><span class="tiny dim grow">목표 약 ${info.target_chars.toLocaleString()}자 (공백 제외). 음성을 한 번 만들면 그 음성의 실제 속도로 분량을 다시 맞춰요.</span>
+        <button class="ghost" onclick="saveScriptForm()">설정 저장</button>${aiButton("script", p.script ? "대본 다시 쓰기" : "대본 생성")}</div>
+    </div>
+    <div class="panel">
+      <div class="tabs" id="langtabs"><button aria-selected="true" onclick="scriptTab('ko')">한국어</button>${tr.map(l => `<button onclick="scriptTab('${l}')">${{ja: "일본어", en: "영어"}[l] || l}</button>`).join("")}</div>
+      <textarea id="s_script" rows="18" placeholder="대본을 생성하거나 직접 써도 돼요. '## 소제목' 줄은 낭독하지 않고 유튜브 챕터로 쓰여요.">${esc(p.script)}</textarea>
+      <div class="row tiny" style="margin-top:6px"><span id="s_count" class="dim grow"></span><button class="ghost sm" onclick="saveScript()">대본 저장</button></div>
+      <div id="checks" style="margin-top:10px">${(p.checks || []).map(c => `<div class="check"><span class="${c.level === "ok" ? "ok" : c.level === "bad" ? "bad" : "warn"}">${c.level === "ok" ? "✓" : "!"}</span><b>${esc(c.title)}</b><span class="dim">${esc(c.detail)}</span></div>`).join("")}</div>
+    </div>
+    ${p.script ? `<div class="grid2">
+      <div class="panel"><h2>사실 대조 · 정책 점검</h2><p class="tiny dim">참고 자료와 다른 숫자, 근거 없는 주장, 투자 권유 같은 위험한 표현을 찾아 고친 문장을 제안해요.</p>
+        ${aiButton("factcheck", "점검하기", {}, "ghost")}
+        <div style="margin-top:10px">${p.factcheck === null || p.factcheck === undefined ? "" : p.factcheck.length === 0 ? '<div class="ok">문제를 찾지 못했어요.</div>' :
+          p.factcheck.map((f, i) => `<div class="check" style="flex-direction:column"><div class="warn">“${esc(f.quote)}”</div><div class="dim">${esc(f.problem)}</div><div class="row"><span class="ok grow">→ ${esc(f.fix)}</span><button class="sm ghost" onclick="applyFix(${i})">적용</button></div></div>`).join("")}</div></div>
+      <div class="panel"><h2>대본 번역</h2><p class="tiny dim">같은 그림으로 일본어·영어 버전 영상을 만들 때 써요. 원문은 그대로 남아요.</p>
+        <div class="row"><select id="t_lang" style="width:auto"><option value="ja">일본어</option><option value="en">영어</option></select><span id="t_btn"></span></div></div>
+    </div>` : ""}
+    ${nextBtn("script")}`;
+  const ta = $("#s_script");
+  const upd = () => { const n = stripCount(ta.value); $("#s_count").textContent = `${n.toLocaleString()}자 (공백 제외) · 예상 약 ${Math.round(n / (state.info.target_chars / (p.minutes || 10)) * 10) / 10}분 · 목표 ${state.info.target_chars.toLocaleString()}자`; };
+  ta.oninput = upd; upd();
+  ta.onblur = () => { if (state.scriptLang === "ko" || !state.scriptLang) { if (ta.value !== state.p.script) saveScript(true); } else saveTranslation(true); };
+  state.scriptLang = "ko";
+  if ($("#t_btn")) { const drawT = () => $("#t_btn").innerHTML = aiButton("translate", "번역", {lang: $("#t_lang").value}, "ghost"); drawT(); $("#t_lang").onchange = drawT; }
+}
+function scriptTab(l) {
+  document.querySelectorAll("#langtabs button").forEach(b => b.setAttribute("aria-selected", b.textContent === ({ko: "한국어", ja: "일본어", en: "영어"})[l]));
+  state.scriptLang = l;
+  $("#s_script").value = l === "ko" ? state.p.script : state.p.translations[l];
+}
+async function saveScriptForm() {
+  await save({topic: $("#s_topic").value, source_url: $("#s_url").value, source_text: $("#s_src").value, category: $("#s_cat").value,
+    minutes: +$("#s_min").value, chars: +$("#s_chars").value || 0, cta: $("#s_cta").value, tone_note: $("#s_note").value}, true);
+  await loadProject();
+}
+// AI 단계를 실행하기 전에 입력값을 저장한다
+const _runStep = runStep;
+runStep = async (step, opts) => { if (state.view === "script" && $("#s_topic")) await saveScriptForm(); return _runStep(step, opts); };
+const _manualStep = manualStep;
+manualStep = async (step, opts) => { if (state.view === "script" && $("#s_topic")) await saveScriptForm(); return _manualStep(step, opts); };
+async function saveScript(quiet) { await save({script: $("#s_script").value}, quiet); await loadProject(); if (!quiet) render(); }
+async function saveTranslation(quiet) { const t = {...state.p.translations, [state.scriptLang]: $("#s_script").value}; await save({translations: t}, quiet); }
+async function fetchUrl() {
+  const url = $("#s_url").value.trim();
+  if (!url) return toast("링크를 넣어 주세요", true);
+  try { const a = await api("/api/fetch_url", {url}); $("#s_src").value = (a.title ? a.title + "\n\n" : "") + a.text; $("#s_src").closest("details").open = true; if (!$("#s_topic").value) $("#s_topic").value = a.title; await saveScriptForm(); toast(`본문 ${a.text.length.toLocaleString()}자를 가져왔어요`); } catch (e) { fail(e); }
+}
+async function applyFix(i) {
+  const f = state.p.factcheck[i];
+  if (!state.p.script.includes(f.quote)) return toast("대본에서 그 문장을 찾지 못했어요. 직접 고쳐 주세요.", true);
+  const fc = state.p.factcheck.filter((_, k) => k !== i);
+  await save({script: state.p.script.replace(f.quote, f.fix), factcheck: fc});
+  await loadProject(); render();
+}
+
+// ---------------- 2. 음성 ----------------
+async function viewVoice() {
+  const p = state.p, v = p.voice;
+  $("#main").innerHTML = header("voice", "목소리를 고르고 미리 들어 본 뒤 음성을 만들어요. 문장마다 따로 만들어 자막이 정확히 맞고, 고친 문장만 다시 만들어요.") +
+    `<div class="panel"><div class="row"><h2 class="grow" style="margin:0">목소리</h2><span class="tiny dim">★ 즐겨찾기는 맨 앞에 보여요</span></div>
+    <div class="tabs" id="vtabs" style="margin-top:10px"></div><div class="vgrid" id="vgrid"><div class="dim">목소리 목록 불러오는 중…</div></div></div>
+    <div class="grid2">
+      <div class="panel"><h2>음성 · 자막 설정</h2>
+        <label class="field"><span>말하기 속도 <b id="spv">${(+v.speed).toFixed(2)}배</b></span><input type="range" id="v_speed" min="0.7" max="1.5" step="0.05" value="${v.speed}"></label>
+        <p class="tiny dim">1.0배가 기본이에요. ElevenLabs는 0.7~1.2배까지 반영돼요. 바꾼 뒤에는 음성을 다시 만드세요.</p>
+        <label class="field"><span>말투 지시 (Gemini·OpenAI 음성)</span><input id="v_style" value="${esc(v.style)}" placeholder="예: 차분하고 신뢰감 있는 뉴스 앵커처럼, 또렷하게"></label>
+        <label class="row" style="margin-top:10px"><input type="checkbox" id="v_num" ${v.numbers ? "checked" : ""}> 숫자를 한국어로 읽기 (86주 → 팔십육 주, 3명 → 세 명). 자막에는 숫자 그대로</label>
+        <p class="tiny dim" style="margin:4px 0 0">Azure·Gemini 같은 자연스러운 음성은 숫자를 스스로 잘 읽어요. 어색하면 이 칸을 끄고 다시 만들어 비교해 보세요.</p>
+        <label class="field" style="margin-top:10px"><span>발음 사전 (한 줄에 하나, <span class="kbd">글자=읽기</span>)</span><textarea id="v_dict" rows="3" placeholder="KOSPI=코스피&#10;LH=엘에이치&#10;용산구=용산 구">${esc(v.dictionary)}</textarea></label>
+        <div class="grid2" style="margin-top:10px">
+          <label class="field"><span>문장 사이 쉼 <b id="gv">${v.gap}초</b></span><input type="range" id="v_gap" min="0" max="1" step="0.05" value="${v.gap}"></label>
+          <label class="field"><span>문단 사이 쉼 <b id="pgv">${v.para_gap}초</b></span><input type="range" id="v_pgap" min="0" max="2" step="0.05" value="${v.para_gap}"></label>
+        </div>
+        <label class="row" style="margin-top:10px"><input type="checkbox" id="v_comp" ${v.compress ? "checked" : ""}> 무음 압축 (문장 안의 긴 쉼 줄이기)</label>
+        <div class="grid3" style="margin-top:6px">
+          <label class="field"><span>최소 무음 <b id="msv">${v.min_silence}</b>초</span><input type="range" id="v_min" min="0.2" max="1.5" step="0.05" value="${v.min_silence}"></label>
+          <label class="field"><span>남길 무음 <b id="ksv">${v.keep_silence}</b>초</span><input type="range" id="v_keep" min="0.05" max="0.8" step="0.05" value="${v.keep_silence}"></label>
+          <label class="field"><span>감지 기준 <b id="dbv">${v.silence_db}</b>dB</span><input type="range" id="v_db" min="-70" max="-30" step="1" value="${v.silence_db}"></label>
+        </div>
+      </div>
+      <div class="panel"><h2>생성</h2>
+        <div id="v_sel" class="hint"></div>
+        <div class="row"><button onclick="makeVoice()">${p.audio ? "음성 다시 만들기" : "음성 생성"}</button><span class="tiny dim">대본 ${stripCount(p.script).toLocaleString()}자</span></div>
+        ${state.info.length_warning ? `<div class="notice" style="margin-top:10px">⚠ ${esc(state.info.length_warning)}</div>` : ""}
+        ${p.audio ? `<div style="margin-top:12px"><div class="row"><b>완성: ${fmt(p.audio.total)}</b><span class="tiny dim">${esc(p.audio.voice.name || p.audio.voice.id)} · ${esc(p.audio.made)}</span></div>
+          <audio id="narr" controls style="width:100%;margin-top:6px" src="${fileUrl(p.audio.narration)}"></audio>
+          <div class="sents" id="sents">${p.audio.sentences.map((s, i) => `<div data-t="${s.start}" data-e="${s.end}" onclick="seek(${s.start})"><span class="t">${fmt(s.start)}</span><span>${esc(s.text)}</span></div>`).join("")}</div>
+          <p class="tiny dim">문장을 누르면 그 위치부터 들어요. 틀린 발음은 발음 사전에 넣고 다시 만들면 그 문장만 새로 만들어요.</p></div>` : ""}
+      </div>
+    </div>
+    <div class="panel"><h2>다국어 음성 (선택)</h2>
+      <p class="tiny dim">같은 장면과 그림을 쓰면서 일본어·영어 버전 영상을 함께 만들어요. 먼저 대본 단계에서 번역을 만들어 두세요.</p>
+      ${["ja", "en"].map(l => { const has = p.translations[l]; const a = p.audio_lang[l]; return `<div class="row" style="padding:6px 0;border-bottom:1px dashed var(--line)">
+        <b style="width:70px">${{ja: "日本語", en: "English"}[l]}</b>
+        ${has ? `<select id="ml_${l}" style="width:auto;max-width:280px"></select><button class="sm ghost" onclick="makeVoiceLang('${l}')">${a ? "다시 만들기" : "음성 생성"}</button>${a ? `<span class="pill ok">${fmt(a.total)}</span><audio controls src="${fileUrl(a.narration)}" style="height:32px"></audio>` : ""}`
+          : `<span class="tiny dim">번역이 없어요 → </span>${aiButton("translate", "번역 만들기", {lang: l}, "sm ghost")}`}</div>`; }).join("")}
+    </div>` + nextBtn("voice");
+  const bind = (id, out, fmtv) => { const el = $(id); el.oninput = () => $(out).textContent = fmtv ? fmtv(el.value) : el.value; };
+  bind("#v_speed", "#spv", x => (+x).toFixed(2) + "배"); bind("#v_gap", "#gv", x => x + "초"); bind("#v_pgap", "#pgv", x => x + "초");
+  bind("#v_min", "#msv"); bind("#v_keep", "#ksv"); bind("#v_db", "#dbv");
+  document.querySelectorAll("#main input, #main textarea").forEach(el => el.addEventListener("change", saveVoiceForm));
+  if (p.audio) {
+    const a = $("#narr");
+    a.ontimeupdate = () => { const t = a.currentTime; document.querySelectorAll("#sents div").forEach(d => d.classList.toggle("on", t >= +d.dataset.t && t < +d.dataset.e)); };
+  }
+  if (!state.voices) { try { state.voices = (await api("/api/voices")).voices; } catch (e) { fail(e); state.voices = []; } }
+  drawVoices();
+}
+function voiceForm() {
+  return {...state.p.voice, speed: +$("#v_speed").value, style: $("#v_style").value, numbers: $("#v_num").checked, dictionary: $("#v_dict").value,
+    gap: +$("#v_gap").value, para_gap: +$("#v_pgap").value, compress: $("#v_comp").checked, min_silence: +$("#v_min").value, keep_silence: +$("#v_keep").value, silence_db: +$("#v_db").value};
+}
+async function saveVoiceForm() { await save({voice: voiceForm()}, true); }
+const favs = () => { try { return JSON.parse(localStorage.vwFav || "[]"); } catch (e) { return []; } };
+function toggleFav(key, ev) { ev.stopPropagation(); let f = favs(); f = f.includes(key) ? f.filter(x => x !== key) : [...f, key]; try { localStorage.vwFav = JSON.stringify(f); } catch (e) {} drawVoices(); }
+function drawVoices() {
+  const vs = state.voices || [], f = favs();
+  const groups = {all: "전체", fav: "★ 즐겨찾기", free: "무료", sapi: "윈도우 기본", azure: "Azure (무료 등급)", gemini: "Gemini", openai: "OpenAI", elevenlabs: "ElevenLabs"};
+  const have = new Set(vs.map(v => v.provider));
+  const tab = state.voiceTab = (state.voiceTab in groups ? state.voiceTab : "all");
+  $("#vtabs").innerHTML = Object.entries(groups).filter(([k]) => ["all", "fav", "free"].includes(k) || have.has(k)).map(([k, n]) => `<button aria-selected="${k === tab}" onclick="state.voiceTab='${k}';drawVoices()">${n}</button>`).join("");
+  let list = vs.filter(v => tab === "all" || (tab === "fav" ? f.includes(v.provider + ":" + v.id) : tab === "free" ? v.free : v.provider === tab));
+  list.sort((a, b) => f.includes(b.provider + ":" + b.id) - f.includes(a.provider + ":" + a.id));
+  const cur = state.p.voice;
+  $("#vgrid").innerHTML = list.length ? list.map(v => { const key = v.provider + ":" + v.id; return `<div class="vc" aria-selected="${cur.provider === v.provider && cur.id === v.id}" onclick='pickVoice(${esc(JSON.stringify(v))})'>
+      <button class="star ${f.includes(key) ? "on" : ""}" onclick="toggleFav('${esc(key)}', event)">★</button><b>${esc(v.name)}</b><div class="tiny dim">${esc(v.desc)}</div>
+      ${v.provider !== "silent" && v.id ? `<button class="link sm" style="padding-left:0" onclick='event.stopPropagation();previewVoice(${esc(JSON.stringify(v))}, this)'>▶ 미리듣기</button>` : ""}</div>`; }).join("")
+    : `<div class="dim">이 목록에 목소리가 없어요. 설정에서 Gemini·OpenAI·ElevenLabs 키를 넣으면 목소리가 늘어나요.</div>`;
+  $("#v_sel").innerHTML = cur.provider ? `선택한 목소리: <b>${esc(cur.name || cur.id)}</b> <span class="dim">(${esc(cur.provider)})</span>` : "위에서 목소리를 골라 주세요.";
+  ["ja", "en"].forEach(l => { const s = $("#ml_" + l); if (!s) return; const prev = (state.p.audio_lang[l] || {}).voice || {}; s.innerHTML = vs.filter(v => v.provider !== "sapi" || v.desc.includes(l === "ja" ? "ja-" : "en-")).map(v => `<option value='${esc(JSON.stringify(v))}' ${prev.id === v.id ? "selected" : ""}>${esc(v.name)} · ${esc(v.provider)}</option>`).join(""); });
+}
+async function pickVoice(v) { state.p.voice = {...voiceForm(), provider: v.provider, id: v.id, name: v.name}; await save({voice: state.p.voice}, true); drawVoices(); }
+let previewAudio;
+async function previewVoice(v, btn) {
+  btn.textContent = "만드는 중…";
+  try {
+    const f = voiceForm();
+    const r = await api("/api/voice_preview", {provider: v.provider, id: v.id, speed: f.speed, style: f.style, dictionary: f.dictionary,
+      text: (state.p.audio ? null : null) || (state.p.script ? state.p.script.split(/\n/).find(l => l.trim() && !l.startsWith("#")).slice(0, 90) : "")});
+    previewAudio?.pause(); previewAudio = new Audio(r.url + "?token=" + TOKEN); previewAudio.play();
+  } catch (e) { fail(e); }
+  btn.textContent = "▶ 미리듣기";
+}
+function seek(t) { const a = $("#narr"); a.currentTime = t; a.play(); }
+async function makeVoice() { if (!state.p.voice.provider) return toast("목소리를 먼저 골라 주세요", true); await saveVoiceForm(); runStep("voice", {}); }
+async function makeVoiceLang(l) { const v = JSON.parse($("#ml_" + l).value); runStep("voice", {lang: l, voice: {...voiceForm(), provider: v.provider, id: v.id, name: v.name, numbers: false, dictionary: ""}}); }
+
+// ---------------- 3. 화풍 ----------------
+const STYLE_BG = {cinematic: "#3d5a6c,#c49a6c", pixar3d: "#f59e0b,#3b82f6", miniature: "#86efac,#f9a8d4", cyberpunk: "#7c3aed,#06b6d4", webtoon: "#60a5fa,#fde68a", joseon: "#a8a29e,#57534e",
+  ghibli_like: "#4ade80,#93c5fd", retro_anime: "#f9a8d4,#a78bfa", infographic: "#1e3a8a,#f97316", news_photo: "#64748b,#334155", flat: "#34d399,#fbbf24", whiteboard: "#f8fafc,#94a3b8",
+  dark_horror: "#111827,#7f1d1d", oil: "#92400e,#1e3a8a", senior_warm: "#fed7aa,#fecdd3", pixel: "#22c55e,#6366f1",
+  issue_ink: "#f59e0b,#1e293b", pop_comic: "#ef4444,#facc15", chibi: "#f9a8d4,#bae6fd"};
+function viewStyle() {
+  const p = state.p, st = p.style;
+  const groups = [...new Set(state.cfg.styles.map(s => s.group))];
+  const secs = p.audio ? p.audio.total : stripCount(p.script) / 7.5;
+  const ex = state.cfg.style_examples || {};
+  const missing = state.cfg.styles.filter(s => !ex[s.id]).map(s => s.id);
+  const canAuto = state.cfg.keys.gemini_key || state.cfg.keys.openai_key;
+  const cnt = n => Math.max(3, Math.round(secs / n));
+  $("#main").innerHTML = header("style", "영상 전체에 쓸 화풍과 반복해 나올 인물을 정해요. 예시 그림은 모든 화풍을 같은 장면으로 그려 비교하기 쉽게 했어요.") +
+    `<div class="panel"><div class="row"><h2 class="grow" style="margin:0">화풍 <span class="tiny dim">${state.cfg.styles.length}종 · 예시 그림 ${state.cfg.styles.length - missing.length}/${state.cfg.styles.length}</span></h2>
+      ${canAuto ? `${missing.length ? `<button class="sm" onclick='runStep("style_examples",{ids:${JSON.stringify(missing)}})'>빈 예시 그림 만들기 (${missing.length}장, 약 ${missing.length * 60}원)</button>` : ""}
+      <button class="sm ghost" onclick="if(confirm('예시 그림을 모두 새로 만들까요?'))runStep('style_examples',{})">예시 다시 만들기</button>` : ""}</div>
+    ${canAuto ? "" : `<div class="hint">키가 없으면 카드의 ✎로 예시 프롬프트를 복사해 Gemini 앱 등에서 그림을 만든 뒤, 카드에 끌어다 놓으세요. 한 번 만들어 두면 모든 프로젝트에서 써요.</div>`}
+    ${groups.map(g => `<h3 style="margin-top:14px">${g}</h3><div class="cards">${state.cfg.styles.filter(s => s.group === g).map(s => `<div class="card style-card vc" style="padding:0" data-style="${s.id}" aria-selected="${st.id === s.id && !st.custom}" onclick="pickStyle('${s.id}')">
+      <div class="th" style="background-image:${ex[s.id] ? `url('/files/_styles/${ex[s.id]}&token=${TOKEN}')` : `linear-gradient(135deg,${STYLE_BG[s.id] || "#334155,#0f172a"})`}">${ex[s.id] ? "" : esc(s.name)}</div>
+      <div class="bd"><div class="row" style="gap:4px"><b class="grow">${esc(s.name)}</b><button class="link sm" title="예시 프롬프트 복사" onclick="event.stopPropagation();copyStylePrompt('${s.id}')">✎</button><button class="link sm" title="예시 그림 올리기" onclick="event.stopPropagation();pickStyleImage('${s.id}')">올리기</button></div><div class="tiny dim">${esc(s.desc)}</div></div></div>`).join("")}</div>`).join("")}
+    <label class="field" style="margin-top:14px"><span>직접 입력 화풍 (영어 권장, 쓰면 위 선택보다 우선)</span><input id="st_custom" value="${esc(st.custom)}" placeholder="예: soft pastel children's book illustration, crayon texture"></label>
+    <label class="row" style="margin-top:10px"><input type="checkbox" id="st_ref" ${st.use_ref !== false ? "checked" : ""}> 고른 화풍의 예시 그림을 그림체 기준으로 함께 보내기 (Gemini 이미지, 그림체가 덜 흔들려요)</label>
+    <label class="row" style="margin-top:6px"><input type="checkbox" id="st_text" ${st.allow_text ? "checked" : ""}> 그림 속 한글 허용 (간판·출석부·표지판 같은 글자를 한글로 그려요)</label></div>
+    <div class="grid2"><div class="panel"><h2>등장인물</h2>
+      <textarea id="st_char" rows="4" placeholder="예: Korean man in his 40s, short black hair, navy suit, round glasses (비워 두면 스토리보드에서 AI가 정해요)">${esc(st.character)}</textarea>
+      <p class="tiny dim">실존 인물의 이름이나 얼굴을 쓰지 말고 외형만 묘사하세요.</p></div>
+      <div class="panel"><h2>장면 길이</h2>
+      <label class="field"><span>한 장면 평균 <b id="secv">${st.scene_seconds}초</b> → 약 <b id="cntv">${cnt(st.scene_seconds)}</b>컷</span><input type="range" id="st_sec" min="3" max="120" step="1" value="${st.scene_seconds}"></label>
+      <div class="row tiny" style="margin-top:6px">빠른 선택: ${[[6, "빠른 전개"], [10, "보통"], [30, "차분"], [65, "이슈 해설형 (25분에 약 23장)"]].map(([v, n]) => `<button class="sm ghost" onclick="setSceneSec(${v})">${n}</button>`).join("")}</div>
+      <p class="tiny dim">짧을수록 화면이 자주 바뀌지만 그림이 많이 필요해요. 길면 그림 수와 비용이 크게 줄고, 한 그림을 천천히 움직이며 보여 줘요.</p></div></div>
+    <input type="file" id="st_file" hidden accept="image/*">
+    <div class="next"><button class="ghost" onclick="go('voice')">← 음성</button><button onclick="saveStyle(true)">다음: 스토리보드 →</button></div>`;
+  $("#st_sec").oninput = e => { $("#secv").textContent = e.target.value + "초"; $("#cntv").textContent = cnt(+e.target.value); };
+  ["#st_custom", "#st_char", "#st_sec", "#st_ref", "#st_text"].forEach(s => $(s).addEventListener("change", () => saveStyle(false)));
+  document.querySelectorAll("[data-style]").forEach(c => {
+    c.ondragover = e => { e.preventDefault(); c.style.outline = "2px dashed var(--accent)"; };
+    c.ondragleave = () => c.style.outline = "";
+    c.ondrop = e => { e.preventDefault(); c.style.outline = ""; const f = e.dataTransfer.files[0]; if (f) putStyleImage(c.dataset.style, f); };
+  });
+}
+function setSceneSec(v) { $("#st_sec").value = v; $("#st_sec").dispatchEvent(new Event("input")); saveStyle(false); }
+async function copyStylePrompt(id) { const {prompt} = await api(`/api/prompt?id=${state.pid}&step=style:${id}`); copy(prompt); }
+function pickStyleImage(id) { const inp = $("#st_file"); inp.onchange = () => inp.files[0] && putStyleImage(id, inp.files[0]); inp.value = ""; inp.click(); }
+async function putStyleImage(id, f) { try { await upload(f, {kind: "style", style: id, token: TOKEN}); state.cfg = await api("/api/config"); viewStyle(); toast("예시 그림을 넣었어요"); } catch (e) { fail(e); } }
+async function pickStyle(id) { $("#st_custom").value = ""; state.p.style.id = id; await saveStyle(false); viewStyle(); drawSteps(); }
+async function saveStyle(next) {
+  const st = {...state.p.style, custom: $("#st_custom").value, character: $("#st_char").value, scene_seconds: +$("#st_sec").value,
+    use_ref: $("#st_ref").checked, allow_text: $("#st_text").checked, chosen: true};
+  await save({style: st}, true);
+  if (next) go("storyboard"); else drawSteps();
+}
+
+// ---------------- 4. 스토리보드 ----------------
+function sceneText(sc) {
+  const a = state.p.audio;
+  if (!a) return "";
+  return a.sentences.slice(sc.first, sc.last + 1).map(s => s.text).join(" ");
+}
+function viewStoryboard() {
+  const p = state.p, sb = p.storyboard, times = state.info.scene_times;
+  const opts = (map, cur) => Object.entries(map).map(([k, n]) => `<option value="${k}" ${k === cur ? "selected" : ""}>${n}</option>`).join("");
+  $("#main").innerHTML = header("storyboard", "대본을 장면으로 나누고 장면마다 그림 설명과 카메라 움직임, 전환 효과를 정해요. 모두 고칠 수 있어요.") +
+    (!p.audio ? `<div class="notice">음성을 먼저 만들면 장면 시간이 정확해져요. <a href="#" onclick="go('voice');return false">음성 만들기</a></div>` : "") +
+    `<div class="panel row">${aiButton("storyboard", sb ? "AI로 다시 나누기" : "AI로 장면 나누기")}<button class="ghost" onclick="runStep('storyboard',{even:true})">AI 없이 시간으로 고르게 나누기</button>
+      <span class="grow"></span>${sb ? `<span class="pill acc">${sb.scenes.length}컷</span>` : ""}</div>
+    ${sb && p.style.character ? `<div class="hint">고정 인물: ${esc(p.style.character)}</div>` : ""}
+    ${sb ? sb.scenes.map((sc, i) => `<div class="scene">
+      <div><div class="media" style="${sc.image ? `background-image:url('${fileUrl(sc.image)}')` : ""}">${sc.image ? "" : "그림 없음"}<span class="badge pill">#${i + 1}</span></div>
+        <div class="tiny dim" style="margin-top:6px">${times[i] ? `${fmt(times[i][0])} – ${fmt(times[i][1])} · ${(times[i][1] - times[i][0]).toFixed(1)}초` : ""}</div></div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div class="tiny" style="color:var(--text)">🗣 ${esc(sceneText(sc))}</div>
+        <input value="${esc(sc.visual)}" placeholder="화면 설명" onchange="sceneEdit(${i},{visual:this.value})">
+        <textarea rows="2" placeholder="이미지 프롬프트(영어)" onchange="sceneEdit(${i},{prompt:this.value})">${esc(sc.prompt)}</textarea>
+        <div class="meta">카메라 <select onchange="sceneEdit(${i},{motion:this.value})">${opts(MOTIONS, sc.motion)}</select>
+          들어올 때 <select onchange="sceneEdit(${i},{transition:this.value})">${opts(TRANS, sc.transition)}</select>
+          <span class="grow"></span>${sc.last > sc.first ? `<button class="link sm" onclick="sceneAct(${i},'split')">나누기</button>` : ""}${i < sb.scenes.length - 1 ? `<button class="link sm" onclick="sceneAct(${i},'merge_next')">다음과 합치기</button>` : ""}</div>
+      </div></div>`).join("") : `<div class="empty panel">아직 장면이 없어요. 위 버튼으로 나눠 주세요.</div>`}
+    ${nextBtn("storyboard")}`;
+}
+async function sceneEdit(i, fields) { await api("/api/scene", {id: state.pid, index: i, action: "update", ...fields}).catch(fail); Object.assign(state.p.storyboard.scenes[i], fields); }
+async function sceneAct(i, action, extra) { await api("/api/scene", {id: state.pid, index: i, action, ...(extra || {})}).catch(fail); await loadProject(); render(); }
+
+// ---------------- 5. 이미지 ----------------
+function imgProvider() { return state.p.image_provider || state.cfg.settings.image_provider || (state.cfg.keys.gemini_key ? "gemini" : state.cfg.keys.openai_key ? "openai" : "placeholder"); }
+function viewImage() {
+  const p = state.p, sb = p.storyboard;
+  if (!sb) { $("#main").innerHTML = header("image", "") + `<div class="empty panel">스토리보드를 먼저 만들어 주세요. <button onclick="go('storyboard')">스토리보드로</button></div>`; return; }
+  const done = sb.scenes.filter(s => s.image || s.video).length;
+  const prov = imgProvider();
+  $("#main").innerHTML = header("image", "장면마다 그림을 만들어요. 다른 사이트에서 만든 그림이나 짧은 영상 클립을 카드에 끌어다 놓아도 돼요.") +
+    `<div class="panel"><div class="row end">
+      <label class="field"><span>그림 만들기</span><select id="i_prov" onchange="setImgProv(this.value)">
+        <option value="gemini" ${prov === "gemini" ? "selected" : ""} ${state.cfg.keys.gemini_key ? "" : "disabled"}>Google Gemini 이미지${state.cfg.keys.gemini_key ? "" : " (키 필요)"}</option>
+        <option value="openai" ${prov === "openai" ? "selected" : ""} ${state.cfg.keys.openai_key ? "" : "disabled"}>OpenAI 이미지${state.cfg.keys.openai_key ? "" : " (키 필요)"}</option>
+        <option value="placeholder" ${prov === "placeholder" ? "selected" : ""}>자리표시 카드 (무료, 흐름 확인용)</option></select></label>
+      <button onclick="runStep('images',{provider:'${prov}'})">빈 장면 모두 만들기 (${sb.scenes.length - done}장)</button>
+      <button class="ghost" onclick="if(confirm('모든 장면 그림을 새로 만들까요?'))runStep('images',{provider:'${prov}',overwrite:true})">전체 다시 만들기</button>
+      <span class="grow"></span><span class="pill ${done === sb.scenes.length ? "ok" : "acc"}">${done}/${sb.scenes.length} 완료</span></div>
+      <div class="hint" style="margin-top:12px"><b>다른 사이트에서 만들 때</b> ① <a href="#" onclick="copyAllPrompts();return false">전체 프롬프트 복사</a> → ② 원하는 사이트에서 그림 생성 → ③ 장면 카드에 끌어다 놓기 또는 [교체]. 카드의 ✎로 프롬프트를 하나씩 복사할 수도 있어요. 여러 장을 한 번에 끌어다 놓으면 이름 순서대로 차례로 들어가요.</div></div>
+    ${helperPanel()}
+    <div class="igrid">${sb.scenes.map((sc, i) => `<div class="icard">
+      <div class="media" data-i="${i}" style="${sc.image && !sc.video ? `background-image:url('${fileUrl(sc.image)}')` : ""}">${sc.video ? `<video src="${fileUrl(sc.video)}" muted loop onmouseenter="this.play()" onmouseleave="this.pause()"></video>` : sc.image ? "" : "여기에 그림·영상을 끌어다 놓기"}
+        <span class="num">${i + 1}${sc.video ? " · 영상" : ""}</span></div>
+      <div class="bd"><p title="${esc(sc.visual)}">${esc(sc.visual || sc.prompt)}</p>
+        <div class="row" style="gap:2px"><button class="link sm" onclick="runStep('images',{only:[${i}],provider:'${prov}'})">${sc.image ? "재생성" : "만들기"}</button>
+        <button class="link sm" onclick="pickFile(${i})">교체</button><button class="link sm" title="도우미가 다음 그림을 이 장면에 넣어요" onclick="helperTarget(${i})">여기 받기</button><button class="link sm" title="프롬프트 복사" onclick="copyPrompt(${i})">✎</button><span class="grow"></span>
+        ${sc.video ? `<button class="link sm" style="color:var(--bad)" onclick="sceneAct(${i},'clear_media',{what:'video'})">영상 빼기</button>` : sc.image ? `<button class="link sm" style="color:var(--bad)" onclick="sceneAct(${i},'clear_media',{what:'image'})">지우기</button>` : ""}</div></div></div>`).join("")}</div>
+    <input type="file" id="i_file" hidden accept="image/*,video/*">` + nextBtn("image");
+  document.querySelectorAll(".icard .media").forEach(m => {
+    m.ondragover = e => { e.preventDefault(); m.classList.add("drag"); };
+    m.ondragleave = () => m.classList.remove("drag");
+    m.ondrop = async e => {
+      e.preventDefault(); m.classList.remove("drag");
+      const files = [...e.dataTransfer.files].sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true}));
+      if (files.length <= 1) { if (files[0]) await putScene(+m.dataset.i, files[0]); return; }
+      // 여러 장을 한꺼번에 놓으면 이름 순서대로 이 장면부터 차례로 넣는다
+      const n = state.p.storyboard.scenes.length;
+      if (!confirm(`${files.length}장을 장면 ${+m.dataset.i + 1}부터 차례로 넣을까요?`)) return;
+      try { for (let k = 0; k < files.length && +m.dataset.i + k < n; k++) await upload(files[k], {id: state.pid, kind: "scene", scene: +m.dataset.i + k, token: TOKEN}); } catch (er) { fail(er); }
+      await loadProject(); render();
+    };
+  });
+  helperInit();
+}
+// ---------------- 반자동 그림 도우미 ----------------
+const HELPER_SITES = {gemini: ["Gemini", "https://gemini.google.com/app"], chatgpt: ["ChatGPT", "https://chatgpt.com/"], none: ["열지 않음", ""]};
+let helperPoll = null, helperSeen = 0;
+function helperPanel() {
+  const site = (() => { try { return localStorage.vwSite || "gemini"; } catch (e) { return "gemini"; } })();
+  return `<div class="panel" id="helper"><div class="row"><h2 class="grow" style="margin:0">무료 반자동 도우미 <span class="pill ok">키 필요 없음</span></h2>
+      <span class="tiny dim">사이트는 내가 직접 쓰고, 받은 그림은 앱이 알아서 장면에 넣어요</span></div>
+    <div class="row end" style="margin-top:10px">
+      <label class="field"><span>그림 사이트</span><select id="h_site" onchange="try{localStorage.vwSite=this.value}catch(e){}">${Object.entries(HELPER_SITES).map(([k, [n]]) => `<option value="${k}" ${k === site ? "selected" : ""}>${n}</option>`).join("")}</select></label>
+      <label class="field grow"><span>그림을 받는 폴더 (브라우저 다운로드 폴더)</span><input id="h_dir" placeholder="C:\\Users\\이름\\Downloads"></label>
+      <button id="h_toggle" onclick="helperToggle()">도우미 시작</button></div>
+    <div id="h_body" style="margin-top:12px"></div></div>`;
+}
+async function helperInit() {
+  const h = await api("/api/helper").catch(() => null);
+  if (!h || !$("#h_dir")) return;
+  $("#h_dir").value = h.dir;
+  helperSeen = h.added.length;
+  helperDraw(h);
+  if (h.on && h.pid === state.pid) helperWatch();
+}
+function helperDraw(h) {
+  const on = h.on && h.pid === state.pid;
+  $("#h_toggle").textContent = on ? "도우미 멈추기" : "도우미 시작";
+  $("#h_toggle").className = on ? "ghost" : "";
+  if (!on) {
+    $("#h_body").innerHTML = `<ol class="tiny dim" style="margin:0;padding-left:18px;line-height:1.9">
+      <li>[도우미 시작]을 누르고 <b>시작 지시문</b>을 그림 사이트에 한 번 보내요 (그림체·인물·가로 비율 고정).</li>
+      <li>[장면 프롬프트 복사]를 누르면 프롬프트가 복사되고 사이트가 열려요. 붙여 넣고 Enter.</li>
+      <li>그림이 나오면 <b>다운로드</b>만 누르세요. 앱이 받는 폴더를 지켜보다가 <b>자동으로 그 장면에 넣어요.</b></li>
+      <li>다음 장면도 같은 방법으로. 장면 순서는 아래 카드에서 바꿀 수 있어요.</li></ol>`;
+    return;
+  }
+  const scenes = state.p.storyboard.scenes;
+  const t = h.target;
+  const done = scenes.filter(s => s.image || s.video).length;
+  const last = h.added[h.added.length - 1];
+  $("#h_body").innerHTML = `
+    <div class="row" style="gap:8px"><button class="ghost" onclick="helperIntro()">① 시작 지시문 복사 (대화 처음 한 번)</button>
+      ${t === null || t === undefined ? `<span class="ok">모든 장면에 그림이 들어갔어요 🎉</span>` :
+        `<button onclick="helperCopy(${t})">② 장면 ${t + 1} 프롬프트 복사${HELPER_SITES[$("#h_site").value][1] ? " + 사이트 열기" : ""}</button>
+         <button class="link sm" onclick="helperSkip(${t})">이 장면 건너뛰기</button>`}
+      <span class="grow"></span><span class="pill ${done === scenes.length ? "ok" : "acc"}">${done}/${scenes.length}</span></div>
+    ${t !== null && t !== undefined ? `<div class="hint" style="margin-top:10px"><b>지금 받을 장면 ${t + 1}</b> · ${esc(scenes[t].visual || "")}<br><span class="tiny dim">🗣 ${esc(sceneText(scenes[t]).slice(0, 140))}</span><br>
+      <span class="tiny">받는 폴더를 지켜보는 중… 그림을 다운로드하면 장면 ${t + 1}에 자동으로 들어가요.</span></div>` : ""}
+    ${last ? `<div class="tiny ok" style="margin-top:6px">✓ ${esc(last.file)} → 장면 ${last.scene + 1}</div>` : ""}
+    ${h.error ? `<div class="tiny bad" style="margin-top:6px">${esc(h.error)}</div>` : ""}`;
+  document.querySelectorAll(".icard").forEach((c, i) => c.style.outline = i === t ? "2px solid var(--accent)" : "");
+}
+async function helperToggle() {
+  const h = await api("/api/helper");
+  try {
+    if (h.on && h.pid === state.pid) { await api("/api/helper/stop", {}); clearTimeout(helperPoll); helperPoll = null; }
+    else { await api("/api/helper/start", {id: state.pid, dir: $("#h_dir").value.trim()}); helperSeen = 0; helperWatch(); }
+  } catch (e) { return fail(e); }
+  helperDraw(await api("/api/helper"));
+}
+function helperWatch() {
+  clearTimeout(helperPoll);
+  const tick = async () => {
+    if (state.view !== "image" || !$("#helper")) { helperPoll = null; return; }
+    const h = await api("/api/helper").catch(() => null);
+    if (h) {
+      if (h.added.length !== helperSeen) { helperSeen = h.added.length; await loadProject(); viewImage(); return; }
+      helperDraw(h);
+      if (!h.on) { helperPoll = null; return; }
+    }
+    helperPoll = setTimeout(tick, 1500);
+  };
+  tick();
+}
+function openSite() { const u = HELPER_SITES[$("#h_site").value][1]; if (u) window.open(u, "vw_imagesite"); }
+async function helperIntro() { const {prompt} = await api(`/api/prompt?id=${state.pid}&step=helper_intro`); copy(prompt); openSite(); }
+async function helperCopy(i) { const {prompt} = await api(`/api/prompt?id=${state.pid}&step=scene:${i}`); copy(prompt); openSite(); }
+async function helperSkip(i) {
+  const n = state.p.storyboard.scenes.length;
+  let k = (i + 1) % n;
+  for (let c = 0; c < n; c++, k = (k + 1) % n) { const s = state.p.storyboard.scenes[k]; if (!s.image && !s.video && k !== i) break; }
+  await api("/api/helper/target", {target: k === i ? null : k}); helperDraw(await api("/api/helper"));
+}
+async function helperTarget(i) { await api("/api/helper/target", {target: i}); helperDraw(await api("/api/helper")); }
+
+async function setImgProv(v) { await save({image_provider: v}, true); viewImage(); }
+function pickFile(i) { const inp = $("#i_file"); inp.onchange = () => inp.files[0] && putScene(i, inp.files[0]); inp.value = ""; inp.click(); }
+async function putScene(i, f) { try { toast("올리는 중…"); await upload(f, {id: state.pid, kind: "scene", scene: i, token: TOKEN}); await loadProject(); render(); } catch (e) { fail(e); } }
+async function copyAllPrompts() { const {prompt} = await api(`/api/prompt?id=${state.pid}&step=images`); copy(prompt); }
+async function copyPrompt(i) { const {prompt} = await api(`/api/prompt?id=${state.pid}&step=images`); const part = prompt.split(/\n(?=\[장면 )/)[i] || ""; copy(part.split("\n").slice(1).join("\n").trim()); }
+
+// ---------------- 6. 영상 ----------------
+function viewVideo() {
+  const p = state.p, v = p.video, s = p.sub;
+  const fonts = state.cfg.fonts;
+  const firstImg = (p.storyboard?.scenes || []).find(x => x.image)?.image;
+  const out = p.outputs;
+  const langs = Object.keys(p.audio_lang || {});
+  $("#main").innerHTML = header("video", "화면 효과, 전환, 자막, 로고, 배경음을 정하고 영상을 만들어요. 다시 만들 때는 바뀐 장면만 새로 그려서 빨라요.") +
+    `<div class="grid2"><div class="panel"><h2>영상 설정</h2>
+      <div class="grid2">
+        <label class="field"><span>해상도</span><select id="vd_res"><option value="1920x1080">1920×1080 (가로 FHD)</option><option value="1280x720">1280×720 (가로 HD, 빠름)</option><option value="3840x2160">3840×2160 (가로 4K, 느림)</option><option value="1080x1920">1080×1920 (세로 전체)</option></select></label>
+        <label class="field"><span>화면 효과</span><select id="vd_eff"><option value="ai">장면별 AI 배정 (스토리보드 값)</option><option value="random">줌·이동 랜덤</option><option value="kenburns">켄번즈 (은은한 줌인)</option><option value="none">없음 (정지 화면)</option></select></label>
+        <label class="field"><span>장면 전환</span><select id="vd_tr"><option value="ai">장면별 AI 배정</option><option value="varied">다양하게 (자동 순환)</option><option value="fade">크로스페이드</option><option value="cut">컷 (가장 빠름)</option></select></label>
+        <label class="field"><span>전환 길이 <b id="tdv">${v.trans_dur}초</b></span><input type="range" id="vd_td" min="0.2" max="1.2" step="0.1" value="${v.trans_dur}"></label>
+        <label class="field"><span>움직임 세기 <b id="stv">${Math.round(v.strength * 100)}%</b></span><input type="range" id="vd_st" min="0.04" max="0.3" step="0.01" value="${v.strength}"></label>
+        <label class="field"><span>짧은 클립 채우기</span><select id="vd_fill"><option value="freeze">마지막 프레임 정지</option><option value="loop">반복</option></select></label>
+      </div>
+      <label class="row" style="margin-top:10px"><input type="checkbox" id="vd_sub" ${v.subtitles ? "checked" : ""}> 자막 입히기 (음성과 자동으로 맞춤)</label>
+      <h3 style="margin-top:16px">로고 · 워터마크</h3>
+      <div class="row"><button class="ghost sm" onclick="pickAsset('logo')">${v.logo ? "로고 바꾸기" : "로고 올리기"}</button>${v.logo ? `<button class="link sm" style="color:var(--bad)" onclick="clearAsset('logo')">빼기</button>` : ""}
+        <label class="field grow"><span>크기 <b id="lsv">${Math.round(v.logo_scale * 100)}%</b></span><input type="range" id="vd_ls" min="0.04" max="0.35" step="0.01" value="${v.logo_scale}"></label>
+        <label class="field grow"><span>투명도 <b id="lov">${Math.round(v.logo_opacity * 100)}%</b></span><input type="range" id="vd_lo" min="0.2" max="1" step="0.05" value="${v.logo_opacity}"></label></div>
+      <p class="tiny dim">미리보기에서 로고를 끌어 위치를 바꿀 수 있어요.</p>
+      <h3 style="margin-top:12px">배경음</h3>
+      <div class="row"><button class="ghost sm" onclick="pickAsset('bgm')">${v.bgm ? "배경음 바꾸기" : "배경음 올리기"}</button>${v.bgm ? `<audio controls src="${fileUrl(v.bgm)}" style="height:32px;max-width:220px"></audio><button class="link sm" style="color:var(--bad)" onclick="clearAsset('bgm')">빼기</button>` : ""}</div>
+      <div class="row" style="margin-top:6px"><label class="field grow"><span>배경음 크기 <b id="bvv">${Math.round(v.bgm_volume * 100)}%</b></span><input type="range" id="vd_bv" min="0.02" max="0.8" step="0.01" value="${v.bgm_volume}"></label>
+        <label class="row tiny"><input type="checkbox" id="vd_duck" ${v.bgm_duck ? "checked" : ""}> 말할 때 자동으로 줄이기</label></div>
+      <p class="tiny dim">저작권 걱정 없는 음악(유튜브 오디오 보관함 등)을 쓰세요. 최종 음량은 유튜브 기준(-14 LUFS)으로 맞춰요.</p>
+    </div>
+    <div class="panel"><h2>자막 · 미리보기</h2>
+      <div class="presets">${SUB_PRESETS.map((x, i) => `<button style="${x.css}" onclick="subPreset(${i})">${x.name}</button>`).join("")}</div>
+      <div class="preview ${p.video.resolution === "1080x1920" ? "v" : ""}" id="pv" style="margin-top:12px;${firstImg ? `background-image:url('${fileUrl(firstImg)}')` : ""}">
+        <div class="sub" id="pv_sub">서울 집값이 <span class="acc">86주</span> 연속 올랐어요</div>
+        ${v.logo ? `<img class="logo" id="pv_logo" src="${fileUrl(v.logo)}" draggable="false">` : ""}</div>
+      <div class="grid3" style="margin-top:12px">
+        <label class="field"><span>글자색</span><input type="color" id="sb_color" value="${s.color}"></label>
+        <label class="field"><span>강조색 (숫자)</span><input type="color" id="sb_acc" value="${s.accent}"></label>
+        <label class="field"><span>띠 색</span><input type="color" id="sb_boxc" value="${s.box_color}"></label>
+      </div>
+      <div class="row" style="margin-top:6px"><label class="row tiny"><input type="checkbox" id="sb_box" ${s.box ? "checked" : ""}> 띠 배경</label><label class="row tiny"><input type="checkbox" id="sb_bold" ${s.bold ? "checked" : ""}> 굵게</label><label class="row tiny"><input type="checkbox" id="sb_hl" ${s.highlight_numbers ? "checked" : ""}> 숫자 강조</label></div>
+      <div class="grid2" style="margin-top:6px">
+        <label class="field"><span>크기 <b id="szv">${s.size}</b></span><input type="range" id="sb_size" min="10" max="34" step="1" value="${s.size}"></label>
+        <label class="field"><span>띠 투명도 <b id="bov">${Math.round(s.box_opacity * 100)}%</b></span><input type="range" id="sb_bo" min="0" max="1" step="0.05" value="${s.box_opacity}"></label>
+        <label class="field"><span>테두리 <b id="olv">${s.outline}</b></span><input type="range" id="sb_ol" min="0" max="4" step="0.1" value="${s.outline}"></label>
+        <label class="field"><span>한 줄 최대 글자 <b id="mcv">${s.max_chars}</b></span><input type="range" id="sb_mc" min="10" max="40" step="1" value="${s.max_chars}"></label>
+        <label class="field"><span>위치</span><select id="sb_pos"><option value="bottom">하단</option><option value="center">가운데</option><option value="top">상단</option></select></label>
+        <label class="field"><span>아래 여백 <b id="mgv">${Math.round(s.margin * 100)}%</b></span><input type="range" id="sb_mg" min="0.02" max="0.3" step="0.01" value="${s.margin}"></label>
+      </div>
+      <div class="row end" style="margin-top:6px"><label class="field grow"><span>글꼴</span><select id="sb_font">${fonts.map(f => `<option value="${esc(f.file)}" ${f.file === s.font_file ? "selected" : ""}>${esc(f.family)}${f.user ? " (올린 글꼴)" : ""}</option>`).join("") || "<option value=''>기본 글꼴</option>"}</select></label>
+        <button class="ghost sm" onclick="pickFont()">글꼴 파일 올리기</button></div>
+      <p class="tiny dim">눈누 등에서 받은 무료 상업용 글꼴(.ttf/.otf)을 올리면 목록에 생겨요.</p>
+    </div></div>
+    <div class="panel"><div class="row"><h2 class="grow" style="margin:0">만들기</h2>
+      ${langs.map(l => `<button class="ghost" onclick="makeVideo('${l}')">${{ja: "일본어", en: "영어"}[l]} 버전 만들기</button>`).join("")}
+      <button onclick="makeVideo('ko')">${out.video ? "영상 다시 만들기" : "영상 만들기"}</button></div>
+      ${out.video ? `<video class="player" style="margin-top:12px" controls src="${fileUrl(out.video.file)}"></video>
+        <div class="row tiny dim" style="margin-top:6px">${fmt(out.video.seconds)} · ${(out.video.size / 1e6).toFixed(1)}MB · ${esc(out.video.made)}<span class="grow"></span><a href="${fileUrl(out.video.file, state.p.name + ".mp4")}">MP4 내려받기</a> <a href="${fileUrl(out.video.srt, state.p.name + ".srt")}">SRT 자막</a></div>` : ""}
+      ${langs.filter(l => out["video_" + l]).map(l => `<div class="row tiny" style="margin-top:6px">${{ja: "일본어", en: "영어"}[l]} 버전: <a href="${fileUrl(out["video_" + l].file, state.p.name + "_" + l + ".mp4")}">MP4</a> <a href="${fileUrl(out["video_" + l].srt, state.p.name + "_" + l + ".srt")}">SRT</a></div>`).join("")}
+    </div>` + nextBtn("video");
+  $("#vd_res").value = v.resolution; $("#vd_eff").value = v.effect; $("#vd_tr").value = v.transition; $("#vd_fill").value = v.fill; $("#sb_pos").value = s.position;
+  const lbl = {vd_td: ["#tdv", x => x + "초"], vd_st: ["#stv", x => Math.round(x * 100) + "%"], vd_ls: ["#lsv", x => Math.round(x * 100) + "%"], vd_lo: ["#lov", x => Math.round(x * 100) + "%"], vd_bv: ["#bvv", x => Math.round(x * 100) + "%"],
+    sb_size: ["#szv", x => x], sb_bo: ["#bov", x => Math.round(x * 100) + "%"], sb_ol: ["#olv", x => x], sb_mc: ["#mcv", x => x], sb_mg: ["#mgv", x => Math.round(x * 100) + "%"]};
+  document.querySelectorAll("#main input, #main select").forEach(el => {
+    el.addEventListener("input", () => { if (lbl[el.id]) $(lbl[el.id][0]).textContent = lbl[el.id][1](el.value); drawPreview(); });
+    el.addEventListener("change", saveVideoForm);
+  });
+  drawPreview(); bindLogoDrag();
+}
+function videoForm() {
+  const g = id => $(id);
+  const font = state.cfg.fonts.find(f => f.file === g("#sb_font").value);
+  return {
+    video: {...state.p.video, resolution: g("#vd_res").value, effect: g("#vd_eff").value, transition: g("#vd_tr").value, trans_dur: +g("#vd_td").value, strength: +g("#vd_st").value,
+      fill: g("#vd_fill").value, subtitles: g("#vd_sub").checked, logo_scale: +g("#vd_ls").value, logo_opacity: +g("#vd_lo").value, bgm_volume: +g("#vd_bv").value, bgm_duck: g("#vd_duck").checked},
+    sub: {...state.p.sub, color: g("#sb_color").value, accent: g("#sb_acc").value, box_color: g("#sb_boxc").value, box: g("#sb_box").checked, bold: g("#sb_bold").checked,
+      highlight_numbers: g("#sb_hl").checked, size: +g("#sb_size").value, box_opacity: +g("#sb_bo").value, outline: +g("#sb_ol").value, max_chars: +g("#sb_mc").value,
+      position: g("#sb_pos").value, margin: +g("#sb_mg").value, font_file: font ? font.file : "", font_family: font ? font.family : ""},
+  };
+}
+async function saveVideoForm() { const f = videoForm(); const resChanged = f.video.resolution !== state.p.video.resolution; await save(f, true); if (resChanged) viewVideo(); }
+function drawPreview() {
+  const f = videoForm(), s = f.sub, pv = $("#pv"), el = $("#pv_sub");
+  if (!pv) return;
+  const hex = (c, a) => c + Math.round(a * 255).toString(16).padStart(2, "0");
+  const vert = f.video.resolution === "1080x1920";
+  // 영상에서 글자 높이 = 크기 × 3.2px (가로 1920 기준 높이 1080, 세로는 폭 1080 기준)
+  el.style.fontSize = (s.size * 3.2 * 100 / (vert ? 1080 : 1920)) + "cqw";
+  el.style.color = s.color;
+  el.style.fontWeight = s.bold ? 800 : 500;
+  el.style.fontFamily = `"${s.font_family}", "Malgun Gothic", sans-serif`;
+  el.style.background = s.box ? hex(s.box_color, s.box_opacity) : "transparent";
+  el.style.webkitTextStroke = s.box ? "0" : (s.outline * 0.6) + "px " + (s.outline_color || "#000");
+  el.style.textShadow = s.box ? "none" : "0 0 3px #000";
+  el.style.top = el.style.bottom = "";
+  if (s.position === "bottom") el.style.bottom = (s.margin * 100) + "%"; else if (s.position === "top") el.style.top = (s.margin * 100) + "%"; else el.style.top = "45%";
+  el.querySelectorAll(".acc").forEach(a => a.style.color = s.highlight_numbers ? s.accent : s.color);
+  const lg = $("#pv_logo");
+  if (lg) { lg.style.width = (f.video.logo_scale * 100) + "%"; lg.style.opacity = f.video.logo_opacity; const v = state.p.video;
+    lg.style.left = `calc((100% - ${f.video.logo_scale * 100}%) * ${v.logo_x})`; lg.onload = () => { lg.style.top = `calc((100% - ${lg.offsetHeight}px) * ${v.logo_y})`; }; lg.onload(); }
+}
+function bindLogoDrag() {
+  const lg = $("#pv_logo"), pv = $("#pv");
+  if (!lg) return;
+  lg.onpointerdown = e => {
+    e.preventDefault(); lg.setPointerCapture(e.pointerId);
+    const r = pv.getBoundingClientRect();
+    lg.onpointermove = m => {
+      const x = Math.min(1, Math.max(0, (m.clientX - r.left - lg.offsetWidth / 2) / (r.width - lg.offsetWidth)));
+      const y = Math.min(1, Math.max(0, (m.clientY - r.top - lg.offsetHeight / 2) / (r.height - lg.offsetHeight)));
+      state.p.video.logo_x = +x.toFixed(3); state.p.video.logo_y = +y.toFixed(3); drawPreview();
+    };
+    lg.onpointerup = () => { lg.onpointermove = null; saveVideoForm(); };
+  };
+}
+function subPreset(i) {
+  const v = SUB_PRESETS[i].v;
+  const set = (id, val) => { const el = $(id); if (el.type === "checkbox") el.checked = val; else el.value = val; };
+  set("#sb_color", v.color); set("#sb_acc", v.accent); set("#sb_box", !!v.box); if (v.box_color) set("#sb_boxc", v.box_color); if (v.box_opacity !== undefined) set("#sb_bo", v.box_opacity);
+  set("#sb_bold", v.bold); set("#sb_size", v.size); if (v.outline !== undefined) set("#sb_ol", v.outline); if (v.margin !== undefined) set("#sb_mg", v.margin); set("#sb_pos", v.position); set("#sb_hl", v.highlight_numbers !== false); if (v.max_chars) set("#sb_mc", v.max_chars);
+  state.p.sub.outline_color = v.outline_color || "#000000";
+  document.querySelectorAll("#main input[type=range]").forEach(el => el.dispatchEvent(new Event("input")));
+  saveVideoForm();
+}
+function pickAsset(kind) {
+  const inp = document.createElement("input"); inp.type = "file"; inp.accept = kind === "logo" ? "image/*" : "audio/*";
+  inp.onchange = async () => { try { await upload(inp.files[0], {id: state.pid, kind, token: TOKEN}); await save(videoForm(), true); await loadProject(); viewVideo(); } catch (e) { fail(e); } };
+  inp.click();
+}
+async function clearAsset(kind) { await save({video: {...videoForm().video, [kind]: ""}}, true); await loadProject(); viewVideo(); }
+function pickFont() {
+  const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".ttf,.otf,.ttc";
+  inp.onchange = async () => { try { const r = await upload(inp.files[0], {kind: "font", token: TOKEN}); state.cfg = await api("/api/config"); state.p.sub.font_file = r.file; state.p.sub.font_family = r.family; await save({sub: state.p.sub}, true); viewVideo(); toast(`'${r.family}' 글꼴을 추가했어요`); } catch (e) { fail(e); } };
+  inp.click();
+}
+async function makeVideo(lang) {
+  await save(videoForm(), true);
+  const sb = state.p.storyboard;
+  if (sb && sb.scenes.some(s => !s.image && !s.video) && !confirm("그림이 없는 장면은 자리표시 카드로 들어가요. 계속할까요?")) return;
+  runStep("render", {lang});
+}
+
+// ---------------- 7. 완성 ----------------
+function viewExport() {
+  const p = state.p, out = p.outputs, m = p.meta;
+  const sc = (p.storyboard?.scenes || []);
+  $("#main").innerHTML = header("export", "쇼츠, 썸네일, 제목·설명·태그까지 챙겨서 바로 올릴 수 있게 정리해요.") +
+    `<div class="grid2">
+      <div class="panel"><h2>롱폼 영상</h2>${out.video ? `<video class="player" controls src="${fileUrl(out.video.file)}"></video>
+        <div class="row" style="margin-top:8px"><a href="${fileUrl(out.video.file, p.name + ".mp4")}"><button>MP4 내려받기</button></a><a href="${fileUrl(out.video.srt, p.name + ".srt")}"><button class="ghost">SRT 자막</button></a>
+        ${state.cfg.platform === "win32" ? `<button class="ghost" onclick="api('/api/open_folder',{id:state.pid,sub:'out'})">폴더 열기</button>` : ""}</div>`
+        : `<div class="empty">아직 영상이 없어요. <button onclick="go('video')">영상 만들기</button></div>`}</div>
+      <div class="panel"><h2>쇼츠 (세로 1080×1920)</h2><p class="tiny dim">가장 강한 40~55초 구간을 골라 세로 영상으로 만들어요. 가로 그림은 흐린 배경 위에 놓여 잘리지 않아요.${m?.shorts?.title ? `<br>추천 구간: 문장 ${m.shorts.first + 1}~${m.shorts.last + 1} · “${esc(m.shorts.title)}”` : " 업로드 정보를 먼저 만들면 AI가 구간을 골라요. 없으면 도입부를 써요."}</p>
+        <button onclick="runStep('shorts',{})">${out.shorts ? "쇼츠 다시 만들기" : "쇼츠 만들기"}</button>
+        ${out.shorts ? `<div class="row" style="margin-top:10px;align-items:flex-start"><video controls src="${fileUrl(out.shorts.file)}" style="width:180px;border-radius:10px;background:#000"></video>
+          <div><a href="${fileUrl(out.shorts.file, p.name + "_shorts.mp4")}">쇼츠 MP4</a><br><span class="tiny dim">${fmt(out.shorts.seconds)}</span></div></div>` : ""}</div>
+    </div>
+    <div class="panel"><h2>썸네일</h2>
+      <div class="row end"><label class="field grow"><span>썸네일 문구 (줄바꿈 가능)</span><textarea id="th_text" rows="2">${esc((m?.thumb_texts || [])[0] || p.name)}</textarea></label>
+        <label class="field"><span>배경 장면</span><select id="th_scene">${sc.map((s, i) => `<option value="${i}">#${i + 1} ${esc((s.visual || "").slice(0, 24))}</option>`).join("")}</select></label>
+        <button onclick="runStep('thumbs',{text:$('#th_text').value,scene:+$('#th_scene').value})">썸네일 3종 만들기</button></div>
+      ${m?.thumb_texts?.length ? `<div class="row tiny" style="margin-top:6px">AI 추천 문구: ${m.thumb_texts.map(t => `<button class="link sm" onclick="$('#th_text').value=this.textContent">${esc(t)}</button>`).join("")}</div>` : ""}
+      ${out.thumbs ? `<div class="cards" style="margin-top:12px">${out.thumbs.map((t, i) => `<a class="card" href="${fileUrl(t, p.name + "_썸네일" + (i + 1) + ".jpg")}"><div class="th" style="background-image:url('${fileUrl(t)}')"></div><div class="bd tiny">내려받기</div></a>`).join("")}</div>` : ""}
+    </div>
+    <div class="panel"><div class="row"><h2 class="grow" style="margin:0">제목 · 설명 · 태그</h2>${aiButton("meta", m ? "다시 만들기" : "업로드 정보 만들기")}</div>
+      ${m ? `<h3 style="margin-top:14px">제목 후보</h3>${m.titles.map(t => `<div class="row" style="padding:4px 0"><span class="grow">${esc(t)}</span><span class="tiny dim">${t.length}자</span><button class="sm ghost" onclick="copy(${esc(JSON.stringify(t))})">복사</button></div>`).join("")}
+        <h3 style="margin-top:14px">설명 (챕터 포함)</h3><div class="copybox"><textarea id="desc" rows="10">${esc(state.info.description)}</textarea><button class="sm ghost" onclick="copy($('#desc').value)">복사</button></div>
+        ${state.info.chapters.length < 3 ? `<p class="tiny warn">챕터는 '## 소제목'이 3개 이상이고 음성을 만든 뒤에 자동으로 붙어요.</p>` : ""}
+        <h3 style="margin-top:14px">태그</h3><div class="copybox"><textarea rows="2" id="tags">${esc(m.tags.join(", "))}</textarea><button class="sm ghost" onclick="copy($('#tags').value)">복사</button></div>
+        <h3 style="margin-top:14px">고정 댓글</h3><div class="copybox"><textarea rows="2" id="pin">${esc(m.pinned_comment)}</textarea><button class="sm ghost" onclick="copy($('#pin').value)">복사</button></div>`
+        : `<p class="tiny dim" style="margin-top:8px">클릭을 부르되 내용과 맞는 제목 5개, 챕터가 붙은 설명, 태그 15개, 썸네일 문구, 고정 댓글, 쇼츠 구간을 한 번에 만들어요.</p>`}
+    </div>
+    <div class="grid2">
+      <div class="panel"><h2>편집 프로그램으로 보내기</h2><p class="tiny dim">캡컷·프리미어에서 더 손보고 싶다면 장면 그림, 음성, 자막(SRT), 장면 시간표를 묶어 드려요.</p>
+        <button class="ghost" onclick="runStep('package',{})">편집용 묶음(zip) 만들기</button>${out.package ? ` <a href="${fileUrl(out.package.file, p.name + "_편집용.zip")}">내려받기</a>` : ""}</div>
+      <div class="panel"><h2>올리기 전 확인</h2>
+        <label class="check"><input type="checkbox"> 유튜브 업로드 화면의 <b>“변경되거나 합성된 콘텐츠”</b>에서 AI 생성 여부를 표시했어요 (사실적인 인물·사건 장면이 있으면 필수).</label>
+        <label class="check"><input type="checkbox"> 대본의 숫자·인용이 원문 기사와 맞아요 (대본 단계의 사실 대조 활용).</label>
+        <label class="check"><input type="checkbox"> 배경음·글꼴·업로드한 그림은 상업적 사용이 가능한 것이에요.</label>
+        <label class="check"><input type="checkbox"> 다른 채널의 대본·영상을 그대로 옮기지 않았어요 (재사용 콘텐츠는 수익화가 거절돼요).</label>
+        <label class="check"><input type="checkbox"> 기사 내용을 요약만 하지 않고 나만의 해설·관점을 더했어요.</label></div>
+    </div>`;
+}
+
+// ---------------- 설정 ----------------
+function viewSettings() {
+  const c = state.cfg, s = c.settings, k = c.keys, m = c.masked;
+  const keyRow = (id, name, help, link) => `<label class="field"><span>${name} ${k[id] ? `<span class="pill ok">저장됨 ${esc(m[id])}</span>` : ""}</span>
+    <div class="row"><input id="${id}" type="password" placeholder="${k[id] ? "바꾸려면 새 키 입력" : "키 붙여넣기"}" autocomplete="off" style="flex:1">${k[id] ? `<button class="link sm" onclick="clearKey('${id}')">지우기</button>` : ""}</div>
+    <span class="tiny dim">${help} <a href="${link}" target="_blank">키 발급</a></span></label>`;
+  $("#main").innerHTML = `<h1>설정 · API 키</h1><p class="lead">키는 이 PC의 <span class="kbd">${esc(c.data_dir)}</span> 안에만 저장되고, 해당 AI 회사 서버 말고는 어디에도 보내지 않아요.</p>
+    <div class="panel"><h2>API 키</h2><div class="grid2">
+      ${keyRow("anthropic_key", "Anthropic (Claude)", "대본·스토리보드·업로드 정보에 가장 추천.", "https://console.anthropic.com/settings/keys")}
+      ${keyRow("gemini_key", "Google Gemini", "무료 사용량이 있어요. 글·음성·이미지 모두 가능.", "https://aistudio.google.com/apikey")}
+      ${keyRow("openai_key", "OpenAI", "글·음성·이미지 가능.", "https://platform.openai.com/api-keys")}
+      ${keyRow("elevenlabs_key", "ElevenLabs", "가장 자연스러운 음성 중 하나.", "https://elevenlabs.io/app/settings/api-keys")}
+      ${keyRow("azure_speech_key", "Azure 음성 (무료 등급 추천)", "사람 같은 한국어 음성 SunHi·InJoon 등. 무료 등급(F0)은 한 달 50만 자.", "https://portal.azure.com/#create/Microsoft.CognitiveServicesSpeechServices")}
+      <label class="field"><span>Azure 지역 (음성 리소스를 만든 지역)</span><input id="azure_region" value="${esc(s.azure_region || "")}" placeholder="koreacentral"></label>
+    </div><div class="row" style="margin-top:12px"><button onclick="saveKeys()">키 저장</button><button class="ghost" onclick="testKeys()">연결 테스트</button><span id="testres" class="tiny"></span></div></div>
+    <div class="panel"><h2>어떤 AI를 쓸까요</h2><div class="grid3">
+      <label class="field"><span>글 (대본·장면·제목)</span><select id="text_provider"><option value="claude">Claude</option><option value="gemini">Gemini</option><option value="openai">OpenAI</option><option value="manual">직접 붙여넣기 (키 없이)</option></select></label>
+      <label class="field"><span>Claude 모델</span><input id="claude_model" value="${esc(s.claude_model || "")}" placeholder="${c.defaults.claude_model}"></label>
+      <label class="field"><span>Claude 생각 깊이</span><select id="claude_effort"><option value="low">빠르게 (low)</option><option value="medium">보통 (medium)</option><option value="high">꼼꼼히 (high)</option></select></label>
+      <label class="field"><span>Gemini 글 모델</span><input id="gemini_text_model" value="${esc(s.gemini_text_model || "")}" placeholder="${c.defaults.gemini_text_model}"></label>
+      <label class="field"><span>OpenAI 글 모델</span><input id="openai_text_model" value="${esc(s.openai_text_model || "")}" placeholder="${c.defaults.openai_text_model}"></label>
+      <label class="field"><span>기본 이미지</span><select id="image_provider"><option value="">자동 (키 있는 것)</option><option value="gemini">Gemini</option><option value="openai">OpenAI</option><option value="placeholder">자리표시 카드</option></select></label>
+      <label class="field"><span>Gemini 이미지 모델</span><input id="gemini_image_model" value="${esc(s.gemini_image_model || "")}" placeholder="gemini-2.5-flash-image"></label>
+      <label class="field"><span>OpenAI 이미지 모델</span><input id="openai_image_model" value="${esc(s.openai_image_model || "")}" placeholder="gpt-image-1"></label>
+      <label class="field"><span>OpenAI 이미지 품질</span><select id="openai_image_quality"><option value="low">low (저렴)</option><option value="medium">medium</option><option value="high">high</option></select></label>
+      <label class="field"><span>Gemini 음성 모델</span><input id="gemini_tts_model" value="${esc(s.gemini_tts_model || "")}" placeholder="gemini-2.5-flash-preview-tts"></label>
+      <label class="field"><span>OpenAI 음성 모델</span><input id="openai_tts_model" value="${esc(s.openai_tts_model || "")}" placeholder="gpt-4o-mini-tts"></label>
+      <label class="field"><span>ElevenLabs 모델</span><input id="elevenlabs_model" value="${esc(s.elevenlabs_model || "")}" placeholder="eleven_multilingual_v2"></label>
+      <label class="field"><span>음성 동시 요청 수</span><input id="tts_workers" type="number" min="1" max="10" value="${s.tts_workers || 4}"></label>
+      <label class="field"><span>이미지 동시 요청 수</span><input id="image_workers" type="number" min="1" max="8" value="${s.image_workers || 3}"></label>
+      <label class="field"><span>채널 성격 추가 (쉼표로)</span><input id="categories_custom" value="${esc(s.categories_custom || "")}" placeholder="예: 골프, 낚시"></label>
+    </div><div class="row" style="margin-top:12px"><button onclick="saveSettings()">설정 저장</button></div>
+    <p class="tiny dim">“직접 붙여넣기”는 API 키 없이 Claude.ai·ChatGPT·Gemini 채팅에서 대본을 받아 붙여 넣는 방식이에요. 음성은 윈도우 기본 음성(무료)이나 Gemini 무료 사용량을 쓰면 키 없이도, 혹은 아주 적은 비용으로 만들 수 있어요.</p></div>`;
+  $("#text_provider").value = s.text_provider || "claude"; $("#claude_effort").value = s.claude_effort || "medium";
+  $("#image_provider").value = s.image_provider || ""; $("#openai_image_quality").value = s.openai_image_quality || "medium";
+}
+async function saveKeys() {
+  const body = {};
+  if ($("#azure_region").value.trim()) body.azure_region = $("#azure_region").value.trim();
+  ["anthropic_key", "openai_key", "gemini_key", "elevenlabs_key", "azure_speech_key"].forEach(k => { const v = $("#" + k).value.trim(); if (v) body[k] = v; });
+  await api("/api/config", body).catch(fail); state.cfg = await api("/api/config"); state.voices = null; viewSettings(); toast("키를 저장했어요");
+}
+async function clearKey(k) { await api("/api/config", {["clear_" + k]: true}); state.cfg = await api("/api/config"); state.voices = null; viewSettings(); }
+async function testKeys() { $("#testres").textContent = "확인 중…"; try { const r = await api("/api/test_keys", {}); $("#testres").innerHTML = Object.entries(r).map(([k, v]) => `<div class="${v.startsWith("정상") ? "ok" : "bad"}">${k.replace("_key", "")}: ${esc(v)}</div>`).join("") || "저장된 키가 없어요"; } catch (e) { fail(e); } }
+async function saveSettings() {
+  const ids = ["text_provider", "claude_model", "claude_effort", "openai_text_model", "gemini_text_model", "image_provider", "gemini_image_model", "openai_image_model", "openai_image_quality", "gemini_tts_model", "openai_tts_model", "elevenlabs_model", "tts_workers", "image_workers", "categories_custom"];
+  const body = {}; ids.forEach(i => body[i] = $("#" + i).value.trim());
+  body.tts_workers = +body.tts_workers || 4; body.image_workers = +body.image_workers || 3;
+  await api("/api/config", body).catch(fail); state.cfg = await api("/api/config"); state.voices = null; toast("설정을 저장했어요");
+}
+
+// ---------------- 사용법 ----------------
+function viewGuide() {
+  $("#main").innerHTML = `<h1>사용법</h1><p class="lead">처음이라면 이 순서대로 해 보세요.</p>
+  <div class="panel"><ol style="margin:0;padding-left:20px;line-height:2">
+    <li><b>설정</b>에서 키를 넣어요. 추천 조합: 대본은 Claude, 그림과 음성은 Gemini. 키가 없으면 글 AI를 “직접 붙여넣기”로 두고 음성은 윈도우 기본 음성을 써요.</li>
+    <li><b>홈</b>에서 기사 링크(네이버 뉴스 공유 → 복사)나 주제를 넣고 분량을 골라 시작해요.</li>
+    <li><b>대본</b>을 만들고 “사실 대조”로 숫자와 표현을 점검해요. 직접 고쳐도 돼요.</li>
+    <li><b>음성</b>에서 목소리를 미리 듣고 골라 만들어요. 틀린 발음은 발음 사전에 넣고 다시 만들면 그 문장만 새로 만들어요.</li>
+    <li><b>화풍</b>과 고정 인물을 정하고 <b>스토리보드</b>로 장면을 나눠요.</li>
+    <li><b>이미지</b>를 한 번에 만들거나, 다른 사이트에서 만든 그림·영상 클립을 카드에 끌어다 놓아요.</li>
+    <li><b>영상</b>에서 자막 스타일과 로고·배경음을 정하고 만들어요.</li>
+    <li><b>완성</b>에서 쇼츠, 썸네일, 제목·설명·태그를 만들고 확인 목록을 체크한 뒤 업로드해요.</li></ol>
+  <div class="hint" style="margin-top:12px">원클릭 자동 제작: 홈에서 “원클릭 자동 제작”을 켜고 시작하면 대본부터 쇼츠·썸네일까지 한 번에 진행해요. 음성은 지난번에 고른 목소리를 써요.</div></div>
+  <div class="panel"><h2>비용 줄이는 법</h2><ul style="margin:0;padding-left:20px;line-height:1.9">
+    <li>먼저 “자리표시 카드”로 흐름과 길이를 확인하고, 마지막에 진짜 그림을 만들어요.</li>
+    <li>장면 길이를 10초 이상으로 늘리면 그림 수가 줄어요. 20분 영상은 8초면 약 150장, 12초면 약 100장이에요.</li>
+    <li>음성은 바뀐 문장만 다시 만들고, 영상도 바뀐 장면만 다시 렌더링해요.</li></ul></div>`;
+}
+
+go("home");
+api("/api/job").then(j => { if (j.running) watchJob(); }).catch(() => {});
+</script>
+</body>
+</html>
