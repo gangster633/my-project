@@ -34,7 +34,7 @@ import prompts  # noqa: E402
 import render  # noqa: E402
 
 APP_NAME = "AI 영상 공방"
-VERSION = "1.3.5"
+VERSION = "1.3.6"
 DATA_DIR = Path(os.environ.get("VIDEO_WORKSHOP_HOME") or (Path(os.environ.get("APPDATA", Path.home())) / "VideoWorkshop"))
 PROJECTS = DATA_DIR / "projects"
 CONFIG = DATA_DIR / "config.json"
@@ -502,7 +502,7 @@ class Handler(BaseHTTPRequestHandler):
             raise ValueError("파일이 너무 큽니다")
         allowed = {"scene": (".png", ".jpg", ".jpeg", ".webp", ".mp4", ".mov", ".webm", ".m4v"),
                    "logo": (".png", ".jpg", ".jpeg", ".webp"), "bgm": (".mp3", ".wav", ".m4a", ".ogg", ".aac", ".flac"),
-                   "font": (".ttf", ".otf", ".ttc"), "style": (".png", ".jpg", ".jpeg", ".webp")}
+                   "font": (".ttf", ".otf", ".ttc"), "style": (".png", ".jpg", ".jpeg", ".webp"), "thumb": (".jpg", ".jpeg")}
         if kind not in allowed or ext not in allowed[kind]:
             raise ValueError(f"이 파일 형식은 쓸 수 없습니다: {ext}")
         if kind == "style":
@@ -523,6 +523,16 @@ class Handler(BaseHTTPRequestHandler):
         with store_lock:
             p = load_project(pid)
             folder = pdir(pid)
+            if kind == "thumb":  # 썸네일 편집기에서 만든 그림: 맨 앞에 넣는다
+                (folder / "out").mkdir(exist_ok=True)
+                for old in (folder / "out").glob("thumb_custom_*.jpg"):
+                    old.unlink()
+                rel = f"out/thumb_custom_{int(time.time() * 1000) % 10_000_000}.jpg"
+                self._save_body(folder / rel, n)
+                thumbs = [t for t in p["outputs"].get("thumbs") or [] if not Path(t).name.startswith("thumb_custom_")]
+                p["outputs"]["thumbs"] = [rel] + thumbs
+                save_project(p)
+                return self.send(HTTPStatus.OK, {"ok": True, "file": rel})
             sub = {"scene": "uploads", "logo": "assets", "bgm": "assets"}[kind]
             (folder / sub).mkdir(exist_ok=True)
             stamp = int(time.time() * 1000) % 10_000_000
@@ -706,6 +716,13 @@ class Handler(BaseHTTPRequestHandler):
                     raise ValueError("알 수 없는 단계")
                 save_project(p)
             return self.send(HTTPStatus.OK, {"ok": True, "summary": summary})
+        if path == "/api/thumb_font":
+            # 썸네일 편집기가 영상 자막과 같은 글꼴을 쓰도록 프로젝트 글꼴 경로를 알려 준다
+            with store_lock:
+                p = load_project(d["id"])
+                rel = pipeline._ensure_font(p, pdir(p["id"]))
+                save_project(p)
+            return self.send(HTTPStatus.OK, {"font": rel, "family": p["sub"].get("font_family") or ""})
         if path == "/api/run":
             pdir(d["id"])
             start_job(d["id"], d["step"], d.get("opts") or {})

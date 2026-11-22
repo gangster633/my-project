@@ -956,7 +956,8 @@ function viewExport() {
     <div class="panel"><h2>썸네일</h2>
       <div class="row end"><label class="field grow"><span>썸네일 문구 (줄바꿈 가능)</span><textarea id="th_text" rows="2">${esc((m?.thumb_texts || [])[0] || p.name)}</textarea></label>
         <label class="field"><span>배경 장면</span><select id="th_scene">${sc.map((s, i) => `<option value="${i}">#${i + 1} ${esc((s.visual || "").slice(0, 24))}</option>`).join("")}</select></label>
-        <button onclick="runStep('thumbs',{text:$('#th_text').value,scene:+$('#th_scene').value})">썸네일 3종 만들기</button></div>
+        <button onclick="runStep('thumbs',{text:$('#th_text').value,scene:+$('#th_scene').value})">썸네일 3종 만들기</button>
+        <button class="ghost" onclick="openThumbEditor()">직접 꾸미기 (글자 크기·위치·색)</button></div>
       ${m?.thumb_texts?.length ? `<div class="row tiny" style="margin-top:6px">AI 추천 문구: ${m.thumb_texts.map(t => `<button class="link sm" onclick="$('#th_text').value=this.textContent">${esc(t)}</button>`).join("")}</div>` : ""}
       ${out.thumbs ? `<div class="cards" style="margin-top:12px">${out.thumbs.map((t, i) => `<a class="card" href="${fileUrl(t, p.name + "_썸네일" + (i + 1) + ".jpg")}"><div class="th" style="background-image:url('${fileUrl(t)}')"></div><div class="bd tiny">내려받기</div></a>`).join("")}</div>` : ""}
     </div>
@@ -1032,6 +1033,141 @@ async function saveSettings() {
   const body = {}; ids.forEach(i => body[i] = $("#" + i).value.trim());
   body.tts_workers = +body.tts_workers || 4; body.image_workers = +body.image_workers || 3; body.render_workers = +body.render_workers || 0;
   await api("/api/config", body).catch(fail); state.cfg = await api("/api/config"); state.voices = null; toast("설정을 저장했어요");
+}
+
+// ---------------- 썸네일 편집기 (보이는 그대로 저장) ----------------
+const TE_W = 1280, TE_H = 720;
+const TE_COLORS = ["#FFFFFF", "#FFE400", "#FF3B30", "#00E5FF", "#7CFC00", "#111111"];
+let te = null;
+function teDefaults(text, scene) {
+  const lines = (text || "").split("\n").map(t => t.trim()).filter(Boolean).slice(0, 5);
+  const size = lines.length <= 1 ? 160 : lines.length === 2 ? 130 : 100;
+  const gap = size * 1.15, top = TE_H - 60 - gap * lines.length + gap / 2;
+  return {scene, outline: 10, outlineColor: "#000000", box: "", shade: true, bright: 100,
+    lines: lines.map((t, i) => ({text: t, size, color: i === lines.length - 1 && lines.length > 1 ? "#FFE400" : "#FFFFFF", x: TE_W / 2, y: top + gap * i}))};
+}
+async function openThumbEditor() {
+  const p = state.p, scenes = p.storyboard?.scenes || [];
+  const scene = +($("#th_scene")?.value || 0);
+  if (!scenes.some(s => s.image)) return toast("썸네일에 쓸 장면 그림이 없어요. 그림을 먼저 넣어 주세요.", true);
+  te = p.thumb_edit && p.thumb_edit.lines?.length ? JSON.parse(JSON.stringify(p.thumb_edit)) : teDefaults($("#th_text")?.value || p.name, scene);
+  if (!scenes[te.scene]?.image) te.scene = scenes.findIndex(s => s.image);
+  te.font = "sans-serif";
+  try {
+    const {font, family} = await api("/api/thumb_font", {id: state.pid});
+    if (family) te.font = family;  // .ttc 처럼 브라우저가 못 읽는 글꼴은 컴퓨터에 깔린 같은 이름 글꼴로
+    if (!/\.ttc$/i.test(font)) { const ff = new FontFace("VWThumb", `url("${fileUrl(font)}")`); await ff.load(); document.fonts.add(ff); te.font = "VWThumb"; }
+  } catch (e) { /* 글꼴을 못 읽으면 위 이름이나 기본 글꼴로 */ }
+  const d = $("#dlg");
+  d.style.width = "min(1100px, 96vw)";
+  d.innerHTML = `<h2>썸네일 직접 꾸미기</h2>
+    <p class="tiny dim" style="margin:0 0 8px">글자를 끌어서 옮기고, 줄마다 크기와 색을 바꿀 수 있어요. 보이는 그대로 1280×720 그림으로 저장돼요.</p>
+    <canvas id="te_cv" width="${TE_W}" height="${TE_H}" style="width:100%;border-radius:10px;background:#000;cursor:move;touch-action:none"></canvas>
+    <div class="row" style="gap:10px;flex-wrap:wrap;margin-top:10px">
+      <label class="field"><span>배경 장면</span><select id="te_scene">${scenes.map((s, i) => s.image ? `<option value="${i}">#${i + 1} ${esc((s.visual || "").slice(0, 20))}</option>` : "").join("")}</select></label>
+      <label class="field"><span>배경 밝기 <b id="te_bv"></b></span><input id="te_bright" type="range" min="40" max="130"></label>
+      <label class="field"><span>테두리 두께 <b id="te_ov"></b></span><input id="te_outline" type="range" min="0" max="30"></label>
+      <label class="field"><span>테두리 색</span><input id="te_ocolor" type="color"></label>
+      <label class="field"><span>글자 뒤 띠</span><select id="te_box"><option value="">없음</option><option value="#E11D48">빨강</option><option value="#000000">검정</option><option value="#FFE400">노랑</option><option value="#FFFFFF">흰색</option></select></label>
+      <label class="row tiny" style="gap:4px"><input id="te_shade" type="checkbox"> 아래쪽 어둡게</label>
+    </div>
+    <div id="te_lines" style="margin-top:8px"></div>
+    <div class="row" style="justify-content:space-between;margin-top:12px">
+      <div class="row" style="gap:6px"><button class="sm ghost" onclick="teAddLine()">+ 줄 추가</button><button class="sm ghost" onclick="teCenter()">가운데 정렬</button><button class="sm ghost" onclick="teReset()">처음 모양으로</button></div>
+      <div class="row" style="gap:6px"><button class="ghost" onclick="dlg.close()">닫기</button><button id="te_save">저장하고 썸네일 1번으로</button></div>
+    </div>`;
+  d.onclose = () => { d.style.width = ""; d.onclose = null; };
+  d.showModal();
+  $("#te_scene").value = te.scene; $("#te_bright").value = te.bright; $("#te_outline").value = te.outline; $("#te_ocolor").value = te.outlineColor;
+  $("#te_box").value = te.box; $("#te_shade").checked = te.shade;
+  $("#te_scene").onchange = e => { te.scene = +e.target.value; teLoadBg(); };
+  $("#te_bright").oninput = e => { te.bright = +e.target.value; teDraw(); };
+  $("#te_outline").oninput = e => { te.outline = +e.target.value; teDraw(); };
+  $("#te_ocolor").oninput = e => { te.outlineColor = e.target.value; teDraw(); };
+  $("#te_box").onchange = e => { te.box = e.target.value; teDraw(); };
+  $("#te_shade").onchange = e => { te.shade = e.target.checked; teDraw(); };
+  $("#te_save").onclick = teSave;
+  teDragSetup($("#te_cv"));
+  teLines(); teLoadBg();
+}
+function teLoadBg() {
+  const sc = state.p.storyboard.scenes[te.scene];
+  te.img = new Image();
+  te.img.onload = () => teDraw();
+  te.img.src = fileUrl(sc.image);
+}
+function teLines() {
+  $("#te_lines").innerHTML = te.lines.map((l, i) => `<div class="row" style="gap:8px;margin-top:6px;flex-wrap:wrap">
+    <input value="${esc(l.text)}" oninput="te.lines[${i}].text=this.value;teDraw()" style="flex:1;min-width:160px">
+    <span class="tiny dim">크기</span><input type="range" min="40" max="320" value="${l.size}" oninput="te.lines[${i}].size=+this.value;this.nextElementSibling.textContent=this.value;teDraw()" style="width:150px"><span class="tiny" style="width:30px">${l.size}</span>
+    ${TE_COLORS.map(c => `<button title="${c}" onclick="te.lines[${i}].color='${c}';teLines();teDraw()" style="width:22px;height:22px;padding:0;border-radius:50%;background:${c};border:${l.color.toUpperCase() === c ? "3px solid var(--accent, #4f8cff)" : "1px solid #888"}"></button>`).join("")}
+    <input type="color" value="${l.color}" oninput="te.lines[${i}].color=this.value;teDraw()" style="width:30px;padding:0">
+    <button class="link sm" onclick="te.lines.splice(${i},1);teLines();teDraw()">지우기</button></div>`).join("");
+  $("#te_ov").textContent = te.outline; $("#te_bv").textContent = te.bright + "%";
+}
+function teAddLine() { const last = te.lines[te.lines.length - 1]; te.lines.push({text: "새 문구", size: 110, color: "#FFFFFF", x: TE_W / 2, y: last ? Math.min(TE_H - 60, last.y + last.size * 1.15) : TE_H / 2}); teLines(); teDraw(); }
+function teCenter() { te.lines.forEach(l => l.x = TE_W / 2); teDraw(); }
+function teReset() { const keep = te.font, img = te.img; te = teDefaults(te.lines.map(l => l.text).join("\n"), te.scene); te.font = keep; te.img = img; openThumbEditorControls(); }
+function openThumbEditorControls() { $("#te_bright").value = te.bright; $("#te_outline").value = te.outline; $("#te_ocolor").value = te.outlineColor; $("#te_box").value = te.box; $("#te_shade").checked = te.shade; teLines(); teDraw(); }
+function teBounds(c, l) {
+  c.font = `${l.size}px "${te.font}", sans-serif`;
+  const w = c.measureText(l.text).width, h = l.size;
+  return {x: l.x - w / 2, y: l.y - h / 2, w, h};
+}
+function teDraw(target) {
+  const cv = target || $("#te_cv"); if (!cv || !te) return;
+  const c = cv.getContext("2d");
+  c.clearRect(0, 0, TE_W, TE_H);
+  if (te.img && te.img.complete && te.img.naturalWidth) {
+    const r = Math.max(TE_W / te.img.naturalWidth, TE_H / te.img.naturalHeight);
+    const w = te.img.naturalWidth * r, h = te.img.naturalHeight * r;
+    c.filter = `brightness(${te.bright}%) contrast(108%) saturate(115%)`;
+    c.drawImage(te.img, (TE_W - w) / 2, (TE_H - h) / 2, w, h);
+    c.filter = "none";
+  }
+  if (te.shade) { const g = c.createLinearGradient(0, TE_H * 0.4, 0, TE_H); g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(0,0,0,0.6)"); c.fillStyle = g; c.fillRect(0, 0, TE_W, TE_H); }
+  c.textAlign = "center"; c.textBaseline = "middle"; c.lineJoin = "round";
+  te.lines.forEach((l, i) => {
+    if (!l.text.trim()) return;
+    const b = teBounds(c, l);
+    if (te.box) { const pad = l.size * 0.18; c.fillStyle = te.box; c.fillRect(b.x - pad, b.y - pad * 0.6, b.w + pad * 2, b.h + pad * 1.2); }
+    if (te.outline) { c.strokeStyle = te.outlineColor; c.lineWidth = te.outline * 2 * l.size / 130; c.strokeText(l.text, l.x, l.y + l.size * 0.05); }
+    c.fillStyle = l.color; c.fillText(l.text, l.x, l.y + l.size * 0.05);
+    if (!target && te.drag === i) { c.strokeStyle = "rgba(79,140,255,.9)"; c.lineWidth = 3; c.setLineDash([10, 6]); c.strokeRect(b.x - 8, b.y - 8, b.w + 16, b.h + 16); c.setLineDash([]); }
+  });
+}
+function teDragSetup(cv) {
+  const pt = e => { const r = cv.getBoundingClientRect(); return {x: (e.clientX - r.left) * TE_W / r.width, y: (e.clientY - r.top) * TE_H / r.height}; };
+  let off = null;
+  cv.onpointerdown = e => {
+    const p = pt(e), c = cv.getContext("2d");
+    for (let i = te.lines.length - 1; i >= 0; i--) {
+      const b = teBounds(c, te.lines[i]);
+      if (p.x >= b.x - 12 && p.x <= b.x + b.w + 12 && p.y >= b.y - 12 && p.y <= b.y + b.h + 12) {
+        te.drag = i; off = {x: p.x - te.lines[i].x, y: p.y - te.lines[i].y}; cv.setPointerCapture(e.pointerId); teDraw(); return;
+      }
+    }
+  };
+  cv.onpointermove = e => {
+    if (te.drag == null || !off) return;
+    const p = pt(e), l = te.lines[te.drag];
+    l.x = Math.round(p.x - off.x); l.y = Math.round(p.y - off.y);
+    if (Math.abs(l.x - TE_W / 2) < 14) l.x = TE_W / 2;  // 가운데 근처면 딱 맞춤
+    teDraw();
+  };
+  cv.onpointerup = () => { off = null; te.drag = null; teDraw(); };
+}
+async function teSave() {
+  const cv = document.createElement("canvas"); cv.width = TE_W; cv.height = TE_H;
+  te.drag = null; teDraw(cv);
+  const blob = await new Promise(r => cv.toBlob(r, "image/jpeg", 0.92));
+  try {
+    const r = await fetch(`/api/upload?kind=thumb&id=${state.pid}`, {method: "POST", headers: {"X-Token": TOKEN, "X-Filename": "thumb.jpg"}, body: blob});
+    if (!r.ok) throw new Error((await r.json()).error || "저장 실패");
+    const keep = {scene: te.scene, outline: te.outline, outlineColor: te.outlineColor, box: te.box, shade: te.shade, bright: te.bright, lines: te.lines};
+    await save({thumb_edit: keep}, true);
+    $("#dlg").close(); $("#dlg").style.width = ""; await loadProject(); render(); toast("썸네일을 저장했어요 (1번)");
+  } catch (e) { fail(e); }
 }
 
 // ---------------- 사용법 ----------------
