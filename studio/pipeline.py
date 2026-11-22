@@ -718,7 +718,8 @@ def run_render(p, cfg, ctx, folder, lang="ko", shorts=False):
         render.scene_clip(src, str(cdir / name), dur, motion, W, H, fps, is_video, vcfg.get("fill", "freeze"),
                           vertical_blur=H > W, workdir=cdir, strength=float(vcfg.get("strength") or 0.12))
 
-    workers = max(1, min(int(cfg.get("render_workers") or max(1, min(3, (os.cpu_count() or 2) // 2))), 6))
+    # CPU 코어 수만큼 동시에 만들 때 가장 빠르다(4코어 측정: 2개씩보다 1.3배)
+    workers = max(1, min(int(cfg.get("render_workers") or (os.cpu_count() or 2)), 8))
     with cf.ThreadPoolExecutor(workers) as ex:
         futs = [ex.submit(make_clip, j) for j in todo]
         try:

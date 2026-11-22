@@ -367,8 +367,11 @@ def scene_clip(src, dst, dur, motion, w, h, fps=30, is_video=False, fill="freeze
     prep = Path(workdir or Path(dst).parent) / (Path(dst).stem + "_prep.png")
     prepare_still(src, prep, w, h, vertical_blur)
     eff = _perspective(motion, frames, strength)
-    vf = (eff + "," if eff else "") + "setsar=1,format=yuv420p"
-    run(["-loop", "1", "-framerate", str(fps), "-i", prep, "-vf", vf, "-frames:v", str(frames)] + enc + [dst])
+    # 그림은 한 번만 읽어 loop 로 복제한다(-loop 1 은 프레임마다 PNG 를 다시 읽어 느리다).
+    # 움직임 계산 전에 yuv420p 로 바꾸면 처리할 화소가 절반이라 더 빠르다. 결과 화면은 같다.
+    vf = (f"format=yuv420p,loop=loop={frames - 1}:size=1:start=0,setpts=N/{fps}/TB,"
+          + (eff + "," if eff else "") + "setsar=1")
+    run(["-i", prep, "-vf", vf, "-frames:v", str(frames)] + enc + [dst])
     try:
         prep.unlink()
     except OSError:
