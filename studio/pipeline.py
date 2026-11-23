@@ -39,6 +39,9 @@ class Ctx:
 
 # ---------------- 기본값 ----------------
 
+# 쇼츠 끝에 띄우는 안내 문구 (휴대폰 쇼츠 화면 아래쪽의 '관련 동영상' 버튼으로 롱폼에 오게)
+SHORTS_CTA_TEXT = "전체 이야기는\n▼ 아래 버튼에서"
+
 DEFAULT_VOICE = {"provider": "", "id": "", "name": "", "speed": 1.0, "style": "", "trim": True,
                  "compress": True, "min_silence": 0.5, "keep_silence": 0.3, "silence_db": -50,
                  "gap": 0.25, "para_gap": 0.6, "dictionary": "", "numbers": True}
@@ -48,7 +51,9 @@ DEFAULT_SUB = {"font_file": "", "font_family": "", "size": 17, "color": "#ffffff
                "angle": 0, "max_chars": 25}
 DEFAULT_VIDEO = {"resolution": "1920x1080", "fps": 30, "effect": "ai", "strength": 0.12, "transition": "ai",
                  "trans_dur": 0.5, "subtitles": True, "fill": "freeze", "logo": "", "logo_scale": 0.12, "logo_x": 0.96,
-                 "logo_y": 0.04, "logo_opacity": 0.9, "bgm": "", "bgm_volume": 0.22, "bgm_duck": True}
+                 "logo_y": 0.04, "logo_opacity": 0.9, "bgm": "", "bgm_volume": 0.22, "bgm_duck": True,
+                 "shorts_cta": True, "shorts_cta_text": SHORTS_CTA_TEXT, "shorts_cta_sec": 4,
+                 "shorts_speed": 1.15}
 
 
 def new_project(name, category="경제"):
@@ -663,6 +668,8 @@ def run_render(p, cfg, ctx, folder, lang="ko", shorts=False):
     times = scene_times(p, lang)
     scenes = p["storyboard"]["scenes"]
     t_from, t_to = 0.0, audio["total"]
+    # 쇼츠는 다 만든 뒤 speed 배로 빠르게 한다(목소리 높이는 그대로). 그래서 원래 시간으로는 더 긴 구간을 쓸 수 있다.
+    speed = min(max(float(vcfg.get("shorts_speed") or 1.0), 1.0), 1.5) if shorts else 1.0
     if shorts:
         rng = (p.get("meta") or {}).get("shorts") or {}
         sents = audio["sentences"]
@@ -670,9 +677,9 @@ def run_render(p, cfg, ctx, folder, lang="ko", shorts=False):
             a, b = max(0, int(rng["first"])), min(len(sents) - 1, int(rng["last"]))
         else:
             a, b = 0, 0
-            while b + 1 < len(sents) and sents[b + 1]["end"] - sents[a]["start"] <= 58:
+            while b + 1 < len(sents) and sents[b + 1]["end"] - sents[a]["start"] <= 58 * speed:
                 b += 1
-        t_from, t_to = sents[a]["start"], min(sents[b]["end"] + 0.6, sents[a]["start"] + 59.5)
+        t_from, t_to = sents[a]["start"], min(sents[b]["end"] + 0.6, sents[a]["start"] + 59.5 * speed)
     # 이 구간에 걸치는 장면만, 경계를 구간에 맞게 자른다
     picked = [(i, max(s, t_from) - t_from, min(e, t_to) - t_from) for i, (s, e) in enumerate(times) if e > t_from and s < t_to]
     total = t_to - t_from
@@ -744,15 +751,23 @@ def run_render(p, cfg, ctx, folder, lang="ko", shorts=False):
     # 자막
     ass = None
     cues = cues_for(audio["sentences"], scfg.get("max_chars", 25) if not shorts else min(int(scfg.get("max_chars", 25)), 14), t_from, t_to)
-    if vcfg.get("subtitles", True):
+    cta = None
+    if shorts and vcfg.get("shorts_cta", True) and str(vcfg.get("shorts_cta_text", "")).strip():
+        sec = min(max(float(vcfg.get("shorts_cta_sec") or 4), 1.0) * speed, max(total - 1, 1.0))
+        cta = (str(vcfg["shorts_cta_text"]).strip(), max(total - sec, 0), total)
+    if vcfg.get("subtitles", True) or cta:
         title = None
+        if not vcfg.get("subtitles", True):
+            cues_ass = []
+        else:
+            cues_ass = cues
         if shorts:
             scfg.update(position="bottom", size=float(scfg.get("size", 17)) * 1.7, margin=0.26)
             title = ((p.get("meta") or {}).get("shorts") or {}).get("title") or p.get("name", "")
             title = "\n".join(textutil.subtitle_chunks(title, 12)[:2])
         if (fdir := folder / "fonts").exists():
             shutil.copytree(fdir, work / "fonts", dirs_exist_ok=True)
-        render.write_ass(work / "subs.ass", cues, scfg, W, H, title=title, title_end=total)
+        render.write_ass(work / "subs.ass", cues_ass, scfg, W, H, title=title, title_end=total, cta=cta)
         ass = "subs.ass"
     logo = bgm = None
     if vcfg.get("logo") and (folder / vcfg["logo"]).exists():
@@ -784,6 +799,14 @@ def run_render(p, cfg, ctx, folder, lang="ko", shorts=False):
                         bgm=bgm, bgm_cfg={"volume": vcfg["bgm_volume"], "duck": vcfg["bgm_duck"]}, total=total, progress=prog,
                         encoder=enc_args)
     final = out_dir / f"{stem}.mp4"
+    if speed > 1.001:
+        ctx.report(message=f"쇼츠 속도 {speed:.2f}배로 맞추는 중")
+        fast = f"{stem}.fast.mp4"
+        render.speed_up(out_tmp, fast, speed, fps, enc_args, cwd=work)
+        (work / out_tmp).unlink()
+        out_tmp = fast
+        cues = [(s / speed, e / speed, t) for s, e, t in cues]
+        total = total / speed
     shutil.move(str(work / out_tmp), final)
     render.write_srt(out_dir / f"{stem}.srt", cues)
     p["outputs"][stem] = {"file": f"out/{stem}.mp4", "srt": f"out/{stem}.srt", "made": time.strftime("%Y-%m-%d %H:%M"),

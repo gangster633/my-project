@@ -395,8 +395,9 @@ def _ts(t):
     return f"{int(h)}:{int(m):02d}:{s:05.2f}"
 
 
-def write_ass(path, cues, st, w, h, title=None, title_end=None):
-    """cues: [(start, end, text)]. st: 자막 스타일 설정. title: 쇼츠 위쪽에 고정할 제목."""
+def write_ass(path, cues, st, w, h, title=None, title_end=None, cta=None):
+    """cues: [(start, end, text)]. st: 자막 스타일 설정. title: 쇼츠 위쪽에 고정할 제목.
+    cta: (문구, 시작, 끝) 쇼츠 끝에 화면 가운데 아래쪽에 띄우는 안내 문구."""
     scale = h / 1080 if w >= h else w / 1080
     size = int(st.get("size", 17) * 3.2 * scale)  # 화면 높이 1080 기준 17 -> 약 54px
     pos = st.get("position", "bottom")
@@ -423,6 +424,7 @@ def write_ass(path, cues, st, w, h, title=None, title_end=None):
         f"Style: Text,{font},{text_style}",
         f"Style: Box,{font},{box_style}",
         f"Style: Title,{font},{int(w * 0.075)},{_ass_color(st.get('title_color', '#ffffff'))},&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,{w * 0.006:.1f},0,8,{int(w * 0.06)},{int(w * 0.06)},{int(h * 0.09)},1",
+        f"Style: Cta,{font},{int(w * 0.068)},&H0000E6FF,&H000000FF,&H40000000,&H40000000,-1,0,0,0,100,100,0,0,3,{w * 0.024:.1f},0,5,0,0,0,1",
         "", "[Events]", "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
     ]
     accent = _ass_color(st.get("accent", "#ffd400"))
@@ -430,6 +432,9 @@ def write_ass(path, cues, st, w, h, title=None, title_end=None):
     if title:
         t = title.replace("{", "(").replace("}", ")").replace("\n", "\\N")
         lines.append(f"Dialogue: 2,{_ts(0)},{_ts(title_end or 3600)},Title,,0,0,0,,{t}")
+    if cta:
+        t = cta[0].replace("\\", "").replace("{", "(").replace("}", ")").replace("\r", "").replace("\n", "\\N")
+        lines.append(f"Dialogue: 3,{_ts(cta[1])},{_ts(cta[2])},Cta,,0,0,0,,{{\\pos({w // 2},{int(h * 0.56)})\\fad(350,0)}}{t}")
     for s, e, text in cues:
         t = text.replace("\\", "").replace("{", "(").replace("}", ")").replace("\n", "\\N")
         if box:
@@ -438,6 +443,21 @@ def write_ass(path, cues, st, w, h, title=None, title_end=None):
             t = re.sub(r"(\d[\d,.]*\s?(?:%|퍼센트|[만억조천]?\s?원|주|년|배|명|개|위)?)", lambda m: "{\\c" + accent + "}" + m.group(1) + "{\\c" + base + "}", t)
         lines.append(f"Dialogue: 1,{_ts(s)},{_ts(e)},Text,,0,0,0,,{t}")
     Path(path).write_text("\n".join(lines) + "\n", encoding="utf-8-sig")
+
+
+def speed_up(src, dst, speed, fps=30, encoder=None, cwd=None):
+    """완성된 영상을 speed 배로 빠르게 (목소리 높이는 그대로). 쇼츠용."""
+    speed = float(speed)
+    fc = f"[0:v]setpts=PTS/{speed:.4f}[v];[0:a]atempo={speed:.4f}[a]"
+    head = ["-i", src, "-filter_complex", fc, "-map", "[v]", "-map", "[a]"]
+    tail = ["-r", str(fps), "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", dst]
+    venc = list(encoder or CPU_ENCODER[1])
+    try:
+        run(head + venc + tail, cwd=cwd)
+    except RenderError:
+        if venc == CPU_ENCODER[1]:
+            raise
+        run(head + CPU_ENCODER[1] + tail, cwd=cwd)
 
 
 def write_srt(path, cues):

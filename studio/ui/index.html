@@ -819,6 +819,7 @@ function viewVideo() {
         <label class="field"><span>장면 전환</span><select id="vd_tr"><option value="ai">장면별 AI 배정</option><option value="varied">다양하게 (자동 순환)</option><option value="fade">크로스페이드</option><option value="cut">컷 (가장 빠름)</option></select></label>
         <label class="field"><span>전환 길이 <b id="tdv">${v.trans_dur}초</b></span><input type="range" id="vd_td" min="0.2" max="1.2" step="0.1" value="${v.trans_dur}"></label>
         <label class="field"><span>움직임 세기 <b id="stv">${Math.round(v.strength * 100)}%</b></span><input type="range" id="vd_st" min="0.04" max="0.3" step="0.01" value="${v.strength}"></label>
+        <label class="field"><span>초당 화면 수</span><select id="vd_fps"><option value="30">30장 (기본)</option><option value="24">24장 (약 20% 빠름)</option></select></label>
         <label class="field"><span>짧은 클립 채우기</span><select id="vd_fill"><option value="freeze">마지막 프레임 정지</option><option value="loop">반복</option></select></label>
       </div>
       <label class="row" style="margin-top:10px"><input type="checkbox" id="vd_sub" ${v.subtitles ? "checked" : ""}> 자막 입히기 (음성과 자동으로 맞춤)</label>
@@ -863,7 +864,7 @@ function viewVideo() {
         <div class="row tiny dim" style="margin-top:6px">${fmt(out.video.seconds)} · ${(out.video.size / 1e6).toFixed(1)}MB · ${esc(out.video.made)}<span class="grow"></span><a href="${fileUrl(out.video.file, state.p.name + ".mp4")}">MP4 내려받기</a> <a href="${fileUrl(out.video.srt, state.p.name + ".srt")}">SRT 자막</a></div>` : ""}
       ${langs.filter(l => out["video_" + l]).map(l => `<div class="row tiny" style="margin-top:6px">${{ja: "일본어", en: "영어"}[l]} 버전: <a href="${fileUrl(out["video_" + l].file, state.p.name + "_" + l + ".mp4")}">MP4</a> <a href="${fileUrl(out["video_" + l].srt, state.p.name + "_" + l + ".srt")}">SRT</a></div>`).join("")}
     </div>` + nextBtn("video");
-  $("#vd_res").value = v.resolution; $("#vd_eff").value = v.effect; $("#vd_tr").value = v.transition; $("#vd_fill").value = v.fill; $("#sb_pos").value = s.position;
+  $("#vd_res").value = v.resolution; $("#vd_eff").value = v.effect; $("#vd_tr").value = v.transition; $("#vd_fill").value = v.fill; $("#vd_fps").value = String(v.fps || 30); $("#sb_pos").value = s.position;
   const lbl = {vd_td: ["#tdv", x => x + "초"], vd_st: ["#stv", x => Math.round(x * 100) + "%"], vd_ls: ["#lsv", x => Math.round(x * 100) + "%"], vd_lo: ["#lov", x => Math.round(x * 100) + "%"], vd_bv: ["#bvv", x => Math.round(x * 100) + "%"],
     sb_size: ["#szv", x => x], sb_bo: ["#bov", x => Math.round(x * 100) + "%"], sb_ol: ["#olv", x => x], sb_mc: ["#mcv", x => x], sb_mg: ["#mgv", x => Math.round(x * 100) + "%"]};
   document.querySelectorAll("#main input, #main select").forEach(el => {
@@ -877,7 +878,7 @@ function videoForm() {
   const font = state.cfg.fonts.find(f => f.file === g("#sb_font").value);
   return {
     video: {...state.p.video, resolution: g("#vd_res").value, effect: g("#vd_eff").value, transition: g("#vd_tr").value, trans_dur: +g("#vd_td").value, strength: +g("#vd_st").value,
-      fill: g("#vd_fill").value, subtitles: g("#vd_sub").checked, logo_scale: +g("#vd_ls").value, logo_opacity: +g("#vd_lo").value, bgm_volume: +g("#vd_bv").value, bgm_duck: g("#vd_duck").checked},
+      fill: g("#vd_fill").value, fps: +g("#vd_fps").value || 30, subtitles: g("#vd_sub").checked, logo_scale: +g("#vd_ls").value, logo_opacity: +g("#vd_lo").value, bgm_volume: +g("#vd_bv").value, bgm_duck: g("#vd_duck").checked},
     sub: {...state.p.sub, color: g("#sb_color").value, accent: g("#sb_acc").value, box_color: g("#sb_boxc").value, box: g("#sb_box").checked, bold: g("#sb_bold").checked,
       highlight_numbers: g("#sb_hl").checked, size: +g("#sb_size").value, box_opacity: +g("#sb_bo").value, outline: +g("#sb_ol").value, max_chars: +g("#sb_mc").value,
       position: g("#sb_pos").value, margin: +g("#sb_mg").value, font_file: font ? font.file : "", font_family: font ? font.family : ""},
@@ -932,6 +933,10 @@ function pickAsset(kind) {
   inp.onchange = async () => { try { await upload(inp.files[0], {id: state.pid, kind, token: TOKEN}); await save(videoForm(), true); await loadProject(); viewVideo(); } catch (e) { fail(e); } };
   inp.click();
 }
+async function saveCta() {
+  await save({video: {...state.p.video, shorts_cta: $("#sh_cta").checked, shorts_cta_text: $("#sh_cta_txt").value, shorts_cta_sec: +$("#sh_cta_sec").value, shorts_speed: +$("#sh_spd").value}}, true);
+  toast("쇼츠 설정을 저장했어요. 쇼츠를 다시 만들면 들어가요");
+}
 async function clearAsset(kind) { await save({video: {...videoForm().video, [kind]: ""}}, true); await loadProject(); viewVideo(); }
 function pickFont() {
   const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".ttf,.otf,.ttc";
@@ -956,6 +961,12 @@ function viewExport() {
         ${state.cfg.platform === "win32" ? `<button class="ghost" onclick="api('/api/open_folder',{id:state.pid,sub:'out'})">폴더 열기</button>` : ""}</div>`
         : `<div class="empty">아직 영상이 없어요. <button onclick="go('video')">영상 만들기</button></div>`}</div>
       <div class="panel"><h2>쇼츠 (세로 1080×1920)</h2><p class="tiny dim">가장 강한 40~55초 구간을 골라 세로 영상으로 만들어요. 가로 그림은 흐린 배경 위에 놓여 잘리지 않아요.${m?.shorts?.title ? `<br>추천 구간: 문장 ${m.shorts.first + 1}~${m.shorts.last + 1} · “${esc(m.shorts.title)}”` : " 업로드 정보를 먼저 만들면 AI가 구간을 골라요. 없으면 도입부를 써요."}</p>
+        <div style="margin:8px 0 10px;padding:10px;border:1px solid var(--line);border-radius:10px">
+          <label class="row tiny"><input type="checkbox" id="sh_cta" ${p.video.shorts_cta !== false ? "checked" : ""} onchange="saveCta()"> 끝에 롱폼 안내 문구 띄우기</label>
+          <div class="row" style="margin-top:6px;align-items:flex-start"><textarea id="sh_cta_txt" rows="2" style="flex:1;min-width:0" onchange="saveCta()">${esc(p.video.shorts_cta_text ?? "전체 이야기는\n▼ 아래 버튼에서")}</textarea>
+            <label class="field" style="width:90px"><span>마지막 <b id="sh_cta_sv">${p.video.shorts_cta_sec ?? 4}</b>초</span><input type="range" id="sh_cta_sec" min="2" max="8" step="1" value="${p.video.shorts_cta_sec ?? 4}" oninput="$('#sh_cta_sv').textContent=this.value" onchange="saveCta()"></label></div>
+          <label class="field" style="margin-top:8px"><span>쇼츠 읽는 속도 <b id="sh_spd_v">${(p.video.shorts_speed ?? 1.15).toFixed(2)}배</b> (롱폼 음성을 빠르게, 목소리 높이는 그대로)</span><input type="range" id="sh_spd" min="1" max="1.4" step="0.05" value="${p.video.shorts_speed ?? 1.15}" oninput="$('#sh_spd_v').textContent=(+this.value).toFixed(2)+'배'" onchange="saveCta()"></label>
+          <p class="tiny dim" style="margin:6px 0 0">휴대폰 쇼츠 화면 아래쪽에 롱폼으로 가는 '관련 동영상' 버튼이 나와요(유튜브 스튜디오에서 쇼츠에 롱폼을 연결해 두세요). 줄을 바꾸면 두 줄로 나와요. 바꾼 뒤 쇼츠를 다시 만들어야 들어가요.</p></div>
         <button onclick="runStep('shorts',{})">${out.shorts ? "쇼츠 다시 만들기" : "쇼츠 만들기"}</button>
         ${out.shorts ? `<div class="row" style="margin-top:10px;align-items:flex-start"><video controls src="${fileUrl(out.shorts.file)}" style="width:180px;border-radius:10px;background:#000"></video>
           <div><a href="${fileUrl(out.shorts.file, p.name + "_shorts.mp4")}">쇼츠 MP4</a><br><span class="tiny dim">${fmt(out.shorts.seconds)}</span></div></div>` : ""}</div>
