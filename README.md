@@ -45,3 +45,8 @@ python3 build.py
 | A | @ | 185.199.110.153 |
 | A | @ | 185.199.111.153 |
 | CNAME | www | gangster633.github.io. |
+
+## 다른 프로그램
+
+- `app/` 황금 키워드 찾기 (윈도우 프로그램) — `app/README.md`
+- `studio/` AI 영상 공방: 기사·주제 하나로 유튜브 롱폼·쇼츠·썸네일까지 만드는 윈도우 프로그램 — `studio/README.md`
