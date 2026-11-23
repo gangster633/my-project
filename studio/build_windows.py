@@ -21,6 +21,9 @@ from pathlib import Path
 PY_VERSION = "3.12.8"
 PY_URL = f"https://www.python.org/ftp/python/{PY_VERSION}/python-{PY_VERSION}-embed-amd64.zip"
 FFMPEG_URL = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
+THUMB_FONT_PATHS = ["ofl/blackhansans/BlackHanSans-Regular.ttf", "ofl/dohyeon/DoHyeon-Regular.ttf", "ofl/gothica1/GothicA1-Black.ttf",
+                    "ofl/jua/Jua-Regular.ttf", "ofl/gugi/Gugi-Regular.ttf", "ofl/nanummyeongjo/NanumMyeongjo-ExtraBold.ttf",
+                    "ofl/yeonsung/YeonSung-Regular.ttf", "ofl/nanumpenscript/NanumPenScript-Regular.ttf"]
 NAME = "AI영상공방"
 
 HERE = Path(__file__).resolve().parent
@@ -58,6 +61,8 @@ README = """AI 영상 공방 {version}
 
 [포함된 프로그램]
   FFmpeg (https://ffmpeg.org, GPL) - tools 폴더. 빌드: https://www.gyan.dev/ffmpeg/builds/
+  썸네일 글꼴 (app/ui/fonts) - 검은고딕, 도현, 고딕 A1, 주아, 구기, 나눔명조, 연성, 나눔손글씨 펜.
+    모두 SIL Open Font License 1.1 (https://openfontlicense.org), Google Fonts 저장소에서 받음.
   Python {pyver} (https://python.org), Anthropic Python SDK
 """
 
@@ -105,6 +110,11 @@ def main():
     for f in CODE:
         shutil.copy2(HERE / f, OUT / "app" / f)
     shutil.copy2(HERE / "ui" / "index.html", OUT / "app" / "ui" / "index.html")
+    # 썸네일 글꼴 (SIL Open Font License, Google Fonts 저장소)
+    (OUT / "app" / "ui" / "fonts").mkdir()
+    for path in THUMB_FONT_PATHS:
+        shutil.copy2(fetch(f"https://raw.githubusercontent.com/google/fonts/main/{path}", path.split("/")[-1]),
+                     OUT / "app" / "ui" / "fonts" / path.split("/")[-1])
     run(sys.executable, "-m", "pip", "install", "--quiet", "--disable-pip-version-check", "--target", str(OUT / "app" / "lib"),
         "--platform", "win_amd64", "--python-version", "3.12", "--implementation", "cp", "--only-binary=:all:", "anthropic")
     (OUT / "사용법.txt").write_text(README.format(version=VERSION, name=NAME, pyver=PY_VERSION).replace("\n", "\r\n"), encoding="utf-8-sig")

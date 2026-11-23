@@ -2,3 +2,4 @@ __pycache__/
 app/dist/
 studio/dist/
 /*.zip
+studio/ui/fonts/

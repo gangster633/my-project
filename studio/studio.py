@@ -34,7 +34,7 @@ import prompts  # noqa: E402
 import render  # noqa: E402
 
 APP_NAME = "AI 영상 공방"
-VERSION = "1.3.14"
+VERSION = "1.3.15"
 DATA_DIR = Path(os.environ.get("VIDEO_WORKSHOP_HOME") or (Path(os.environ.get("APPDATA", Path.home())) / "VideoWorkshop"))
 PROJECTS = DATA_DIR / "projects"
 CONFIG = DATA_DIR / "config.json"
@@ -52,6 +52,11 @@ SETTING_FIELDS = ["text_provider", "claude_model", "claude_effort", "openai_text
                   "gemini_tts_model", "openai_tts_model", "elevenlabs_model", "azure_region", "tts_workers", "image_workers", "video_encoder", "render_workers",
                   "default_category", "categories_custom"]
 store_lock = threading.RLock()
+# 썸네일 편집기 글꼴 (모두 SIL Open Font License, 빌드 때 ui/fonts 에 넣는다)
+THUMB_FONTS = [("BlackHanSans-Regular.ttf", "검은고딕 (굵고 강하게)"), ("DoHyeon-Regular.ttf", "도현 (깔끔한 굵은체)"),
+               ("GothicA1-Black.ttf", "고딕 A1 (아주 굵게)"), ("Jua-Regular.ttf", "주아 (둥글고 귀엽게)"),
+               ("Gugi-Regular.ttf", "구기 (레트로)"), ("NanumMyeongjo-ExtraBold.ttf", "나눔명조 (신문 헤드라인)"),
+               ("YeonSung-Regular.ttf", "연성 (붓글씨 느낌)"), ("NanumPenScript-Regular.ttf", "나눔손글씨 펜 (손글씨)")]
 
 
 # ---------------- 저장소 ----------------
@@ -424,6 +429,8 @@ class Handler(BaseHTTPRequestHandler):
                 base = PREVIEWS
             elif parts[0] == "_styles":
                 base = STYLE_DIR
+            elif parts[0] == "_fonts":  # 썸네일 편집기용 무료 글꼴 (ui/fonts)
+                base = HERE / "ui" / "fonts"
             else:
                 base = pdir(parts[0])
             f = (base / parts[1]).resolve()
@@ -440,7 +447,8 @@ class Handler(BaseHTTPRequestHandler):
                 "styles": [{"id": s[0], "group": s[1], "name": s[2], "desc": s[3], "prompt": s[4]} for s in prompts.STYLES],
                 "categories": list(prompts.CATEGORIES) + [c for c in (cfg.get("categories_custom") or "").split(",") if c.strip()],
                 "style_examples": {f.stem: f"{f.name}?t={int(f.stat().st_mtime)}" for f in sorted(STYLE_DIR.glob("*.*")) if not f.stem.startswith("_")} if STYLE_DIR.exists() else {},
-                "fonts": fonts, "ffmpeg": render.ffmpeg_ok(), "data_dir": str(DATA_DIR), "version": VERSION,
+                "fonts": fonts, "thumb_fonts": [{"file": f, "name": n} for f, n in THUMB_FONTS if (HERE / "ui" / "fonts" / f).exists()],
+                "ffmpeg": render.ffmpeg_ok(), "data_dir": str(DATA_DIR), "version": VERSION,
                 "defaults": {"claude_model": ai.CLAUDE_DEFAULT, "openai_text_model": ai.OPENAI_TEXT_DEFAULT,
                              "gemini_text_model": ai.GEMINI_TEXT_DEFAULT},
                 "platform": sys.platform,

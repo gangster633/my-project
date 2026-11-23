@@ -1044,20 +1044,41 @@ async function saveSettings() {
 
 // ---------------- 썸네일 편집기 (보이는 그대로 저장) ----------------
 const TE_W = 1280, TE_H = 720;
-const TE_COLORS = ["#FFFFFF", "#FFE400", "#FF3B30", "#00E5FF", "#7CFC00", "#111111"];
-let te = null;
+const TE_COLORS = ["#FFFFFF", "#FFE400", "#FF3B30", "#00E5FF", "#7CFC00", "#FF4FA3", "#111111"];
+const TE_BOXES = [["", "없음"], ["#E11D48", "빨강"], ["#000000", "검정"], ["#FFE400", "노랑"], ["#FFFFFF", "흰색"], ["#1D4ED8", "파랑"]];
+// 한 번에 바꾸는 스타일. font 는 ui/fonts 파일 이름 (없으면 기본 글꼴)
+const TE_PRESETS = [
+  {name: "노랑 강조", font: "BlackHanSans-Regular.ttf", colors: ["#FFFFFF", "#FFE400"], box: "", outline: 10, outlineColor: "#000000", outline2: false, shadow: true},
+  {name: "빨간 띠", font: "DoHyeon-Regular.ttf", colors: ["#FFFFFF"], box: "#E11D48", outline: 0, outline2: false, shadow: true},
+  {name: "흰 박스", font: "GothicA1-Black.ttf", colors: ["#111111"], box: "#FFFFFF", outline: 0, outline2: false, shadow: true},
+  {name: "이중 테두리", font: "Jua-Regular.ttf", colors: ["#FFE400", "#FFFFFF"], box: "", outline: 8, outlineColor: "#000000", outline2: true, shadow: false},
+  {name: "뉴스 헤드라인", font: "NanumMyeongjo-ExtraBold.ttf", colors: ["#FFFFFF", "#FFE400"], box: "#000000", outline: 0, outline2: false, shadow: false},
+  {name: "레트로", font: "Gugi-Regular.ttf", colors: ["#00E5FF", "#FF4FA3"], box: "", outline: 10, outlineColor: "#111111", outline2: true, shadow: false},
+  {name: "붓글씨", font: "YeonSung-Regular.ttf", colors: ["#FFFFFF", "#FFE400"], box: "", outline: 8, outlineColor: "#000000", outline2: false, shadow: true},
+  {name: "손글씨 메모", font: "NanumPenScript-Regular.ttf", colors: ["#FFFFFF", "#FFE400"], box: "", outline: 6, outlineColor: "#000000", outline2: false, shadow: true, tilts: [-5, 4]},
+];
+let te = null, teFontsReady = {};
 function teDefaults(text, scene) {
   const lines = (text || "").split("\n").map(t => t.trim()).filter(Boolean).slice(0, 5);
   const size = lines.length <= 1 ? 160 : lines.length === 2 ? 130 : 100;
   const gap = size * 1.15, top = TE_H - 60 - gap * lines.length + gap / 2;
-  return {scene, outline: 10, outlineColor: "#000000", box: "", shade: true, bright: 100,
-    lines: lines.map((t, i) => ({text: t, size, color: i === lines.length - 1 && lines.length > 1 ? "#FFE400" : "#FFFFFF", x: TE_W / 2, y: top + gap * i}))};
+  return {scene, outline: 10, outlineColor: "#000000", outline2: false, shadow: false, box: "", shade: true, bright: 100,
+    lines: lines.map((t, i) => ({text: t, size, color: i === lines.length - 1 && lines.length > 1 ? "#FFE400" : "#FFFFFF", x: TE_W / 2, y: top + gap * i, font: "", tilt: 0, box: ""}))};
+}
+const teFam = l => (l.font && teFontsReady[l.font]) || te.font;  // 줄 글꼴 (못 읽었으면 프로젝트 글꼴)
+async function teLoadFonts() {
+  const list = state.cfg.thumb_fonts || [];
+  await Promise.all(list.map(async (f, i) => {
+    if (teFontsReady[f.file]) return;
+    try { const ff = new FontFace("VWT" + i, `url("/files/_fonts/${encodeURIComponent(f.file)}?token=${TOKEN}")`); await ff.load(); document.fonts.add(ff); teFontsReady[f.file] = "VWT" + i; } catch (e) { /* 없는 글꼴은 건너뜀 */ }
+  }));
 }
 async function openThumbEditor() {
   const p = state.p, scenes = p.storyboard?.scenes || [];
   const scene = +($("#th_scene")?.value || 0);
   if (!scenes.some(s => s.image)) return toast("썸네일에 쓸 장면 그림이 없어요. 그림을 먼저 넣어 주세요.", true);
   te = p.thumb_edit && p.thumb_edit.lines?.length ? JSON.parse(JSON.stringify(p.thumb_edit)) : teDefaults($("#th_text")?.value || p.name, scene);
+  te.lines.forEach(l => { if (l.box === undefined) l.box = te.box || ""; l.tilt = l.tilt || 0; l.font = l.font || ""; });  // 예전 저장 형식
   if (!scenes[te.scene]?.image) te.scene = scenes.findIndex(s => s.image);
   te.font = "sans-serif";
   try {
@@ -1065,17 +1086,21 @@ async function openThumbEditor() {
     if (family) te.font = family;  // .ttc 처럼 브라우저가 못 읽는 글꼴은 컴퓨터에 깔린 같은 이름 글꼴로
     if (!/\.ttc$/i.test(font)) { const ff = new FontFace("VWThumb", `url("${fileUrl(font)}")`); await ff.load(); document.fonts.add(ff); te.font = "VWThumb"; }
   } catch (e) { /* 글꼴을 못 읽으면 위 이름이나 기본 글꼴로 */ }
+  await teLoadFonts();
   const d = $("#dlg");
   d.style.width = "min(1100px, 96vw)";
   d.innerHTML = `<h2>썸네일 직접 꾸미기</h2>
-    <p class="tiny dim" style="margin:0 0 8px">글자를 끌어서 옮기고, 줄마다 크기와 색을 바꿀 수 있어요. 보이는 그대로 1280×720 그림으로 저장돼요.</p>
+    <p class="tiny dim" style="margin:0 0 8px">글자를 끌어서 옮기고, 줄마다 크기·글꼴·색·기울기·띠를 바꿀 수 있어요. 보이는 그대로 1280×720 그림으로 저장돼요.</p>
     <canvas id="te_cv" width="${TE_W}" height="${TE_H}" style="width:100%;border-radius:10px;background:#000;cursor:move;touch-action:none"></canvas>
-    <div class="row" style="gap:10px;flex-wrap:wrap;margin-top:10px">
+    <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:10px"><span class="tiny dim">한 번에 바꾸기</span>
+      ${TE_PRESETS.map((pr, i) => `<button class="sm ghost" onclick="teApplyPreset(${i})">${pr.name}</button>`).join("")}</div>
+    <div class="row" style="gap:10px;flex-wrap:wrap;margin-top:8px">
       <label class="field"><span>배경 장면</span><select id="te_scene">${scenes.map((s, i) => s.image ? `<option value="${i}">#${i + 1} ${esc((s.visual || "").slice(0, 20))}</option>` : "").join("")}</select></label>
       <label class="field"><span>배경 밝기 <b id="te_bv"></b></span><input id="te_bright" type="range" min="40" max="130"></label>
       <label class="field"><span>테두리 두께 <b id="te_ov"></b></span><input id="te_outline" type="range" min="0" max="30"></label>
       <label class="field"><span>테두리 색</span><input id="te_ocolor" type="color"></label>
-      <label class="field"><span>글자 뒤 띠</span><select id="te_box"><option value="">없음</option><option value="#E11D48">빨강</option><option value="#000000">검정</option><option value="#FFE400">노랑</option><option value="#FFFFFF">흰색</option></select></label>
+      <label class="row tiny" style="gap:4px"><input id="te_outline2" type="checkbox"> 바깥 흰 테두리 (이중)</label>
+      <label class="row tiny" style="gap:4px"><input id="te_shadow" type="checkbox"> 그림자</label>
       <label class="row tiny" style="gap:4px"><input id="te_shade" type="checkbox"> 아래쪽 어둡게</label>
     </div>
     <div id="te_lines" style="margin-top:8px"></div>
@@ -1085,17 +1110,17 @@ async function openThumbEditor() {
     </div>`;
   d.onclose = () => { d.style.width = ""; d.onclose = null; };
   d.showModal();
-  $("#te_scene").value = te.scene; $("#te_bright").value = te.bright; $("#te_outline").value = te.outline; $("#te_ocolor").value = te.outlineColor;
-  $("#te_box").value = te.box; $("#te_shade").checked = te.shade;
+  $("#te_scene").value = te.scene;
   $("#te_scene").onchange = e => { te.scene = +e.target.value; teLoadBg(); };
-  $("#te_bright").oninput = e => { te.bright = +e.target.value; teDraw(); };
-  $("#te_outline").oninput = e => { te.outline = +e.target.value; teDraw(); };
+  $("#te_bright").oninput = e => { te.bright = +e.target.value; $("#te_bv").textContent = te.bright + "%"; teDraw(); };
+  $("#te_outline").oninput = e => { te.outline = +e.target.value; $("#te_ov").textContent = te.outline; teDraw(); };
   $("#te_ocolor").oninput = e => { te.outlineColor = e.target.value; teDraw(); };
-  $("#te_box").onchange = e => { te.box = e.target.value; teDraw(); };
+  $("#te_outline2").onchange = e => { te.outline2 = e.target.checked; teDraw(); };
+  $("#te_shadow").onchange = e => { te.shadow = e.target.checked; teDraw(); };
   $("#te_shade").onchange = e => { te.shade = e.target.checked; teDraw(); };
   $("#te_save").onclick = teSave;
   teDragSetup($("#te_cv"));
-  teLines(); teLoadBg();
+  openThumbEditorControls(); teLoadBg();
 }
 function teLoadBg() {
   const sc = state.p.storyboard.scenes[te.scene];
@@ -1103,21 +1128,46 @@ function teLoadBg() {
   te.img.onload = () => teDraw();
   te.img.src = fileUrl(sc.image);
 }
-function teLines() {
-  $("#te_lines").innerHTML = te.lines.map((l, i) => `<div class="row" style="gap:8px;margin-top:6px;flex-wrap:wrap">
-    <input value="${esc(l.text)}" oninput="te.lines[${i}].text=this.value;teDraw()" style="flex:1;min-width:160px">
-    <span class="tiny dim">크기</span><input type="range" min="40" max="320" value="${l.size}" oninput="te.lines[${i}].size=+this.value;this.nextElementSibling.textContent=this.value;teDraw()" style="width:150px"><span class="tiny" style="width:30px">${l.size}</span>
-    ${TE_COLORS.map(c => `<button title="${c}" onclick="te.lines[${i}].color='${c}';teLines();teDraw()" style="width:22px;height:22px;padding:0;border-radius:50%;background:${c};border:${l.color.toUpperCase() === c ? "3px solid var(--accent, #4f8cff)" : "1px solid #888"}"></button>`).join("")}
-    <input type="color" value="${l.color}" oninput="te.lines[${i}].color=this.value;teDraw()" style="width:30px;padding:0">
-    <button class="link sm" onclick="te.lines.splice(${i},1);teLines();teDraw()">지우기</button></div>`).join("");
-  $("#te_ov").textContent = te.outline; $("#te_bv").textContent = te.bright + "%";
+function teFontOptions(sel) {
+  return `<option value="">기본 (자막 글꼴)</option>` + (state.cfg.thumb_fonts || []).filter(f => teFontsReady[f.file])
+    .map(f => `<option value="${esc(f.file)}" ${f.file === sel ? "selected" : ""}>${esc(f.name)}</option>`).join("");
 }
-function teAddLine() { const last = te.lines[te.lines.length - 1]; te.lines.push({text: "새 문구", size: 110, color: "#FFFFFF", x: TE_W / 2, y: last ? Math.min(TE_H - 60, last.y + last.size * 1.15) : TE_H / 2}); teLines(); teDraw(); }
+function teLines() {
+  $("#te_lines").innerHTML = te.lines.map((l, i) => `<div style="margin-top:8px;padding:8px;border:1px solid var(--line);border-radius:10px">
+    <div class="row" style="gap:8px;flex-wrap:wrap">
+      <input value="${esc(l.text)}" oninput="te.lines[${i}].text=this.value;teDraw()" style="flex:1;min-width:160px">
+      <select onchange="te.lines[${i}].font=this.value;teDraw()" style="width:auto;max-width:200px">${teFontOptions(l.font)}</select>
+      <button class="link sm" onclick="te.lines.splice(${i},1);teLines();teDraw()">지우기</button></div>
+    <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:6px">
+      <span class="tiny dim">크기</span><input type="range" min="40" max="360" value="${l.size}" oninput="te.lines[${i}].size=+this.value;this.nextElementSibling.textContent=this.value;teDraw()" style="width:130px"><span class="tiny" style="width:30px">${l.size}</span>
+      <span class="tiny dim">기울기</span><input type="range" min="-20" max="20" value="${l.tilt || 0}" oninput="te.lines[${i}].tilt=+this.value;this.nextElementSibling.textContent=this.value+'°';teDraw()" style="width:90px"><span class="tiny" style="width:30px">${l.tilt || 0}°</span>
+      ${TE_COLORS.map(c => `<button title="${c}" onclick="te.lines[${i}].color='${c}';teLines();teDraw()" style="width:22px;height:22px;padding:0;border-radius:50%;background:${c};border:${l.color.toUpperCase() === c ? "3px solid var(--accent, #4f8cff)" : "1px solid #888"}"></button>`).join("")}
+      <input type="color" value="${l.color}" oninput="te.lines[${i}].color=this.value;teDraw()" style="width:30px;padding:0">
+      <span class="tiny dim">띠</span><select onchange="te.lines[${i}].box=this.value;teDraw()" style="width:auto">${TE_BOXES.map(([v, n]) => `<option value="${v}" ${v === (l.box || "") ? "selected" : ""}>${n}</option>`).join("")}</select>
+    </div></div>`).join("");
+}
+function teApplyPreset(k) {
+  const pr = TE_PRESETS[k];
+  te.outline = pr.outline; te.outlineColor = pr.outlineColor || te.outlineColor; te.outline2 = pr.outline2; te.shadow = pr.shadow;
+  te.lines.forEach((l, i) => {
+    l.font = teFontsReady[pr.font] ? pr.font : "";
+    // 마지막 줄(핵심 문구)은 강조색, 나머지 줄은 기본색
+    l.color = i === te.lines.length - 1 ? pr.colors[pr.colors.length - 1] : pr.colors[0];
+    l.box = pr.box; l.tilt = pr.tilts ? pr.tilts[i % pr.tilts.length] : 0;
+  });
+  openThumbEditorControls();
+}
+function teAddLine() { const last = te.lines[te.lines.length - 1]; te.lines.push({text: "새 문구", size: 110, color: "#FFFFFF", x: TE_W / 2, y: last ? Math.min(TE_H - 60, last.y + last.size * 1.15) : TE_H / 2, font: last?.font || "", tilt: 0, box: last?.box || ""}); teLines(); teDraw(); }
 function teCenter() { te.lines.forEach(l => l.x = TE_W / 2); teDraw(); }
 function teReset() { const keep = te.font, img = te.img; te = teDefaults(te.lines.map(l => l.text).join("\n"), te.scene); te.font = keep; te.img = img; openThumbEditorControls(); }
-function openThumbEditorControls() { $("#te_bright").value = te.bright; $("#te_outline").value = te.outline; $("#te_ocolor").value = te.outlineColor; $("#te_box").value = te.box; $("#te_shade").checked = te.shade; teLines(); teDraw(); }
+function openThumbEditorControls() {
+  $("#te_bright").value = te.bright; $("#te_outline").value = te.outline; $("#te_ocolor").value = te.outlineColor;
+  $("#te_outline2").checked = !!te.outline2; $("#te_shadow").checked = !!te.shadow; $("#te_shade").checked = te.shade;
+  $("#te_ov").textContent = te.outline; $("#te_bv").textContent = te.bright + "%";
+  teLines(); teDraw();
+}
 function teBounds(c, l) {
-  c.font = `${l.size}px "${te.font}", sans-serif`;
+  c.font = `${l.size}px "${teFam(l)}", sans-serif`;
   const w = c.measureText(l.text).width, h = l.size;
   return {x: l.x - w / 2, y: l.y - h / 2, w, h};
 }
@@ -1136,10 +1186,17 @@ function teDraw(target) {
   c.textAlign = "center"; c.textBaseline = "middle"; c.lineJoin = "round";
   te.lines.forEach((l, i) => {
     if (!l.text.trim()) return;
-    const b = teBounds(c, l);
-    if (te.box) { const pad = l.size * 0.18; c.fillStyle = te.box; c.fillRect(b.x - pad, b.y - pad * 0.6, b.w + pad * 2, b.h + pad * 1.2); }
-    if (te.outline) { c.strokeStyle = te.outlineColor; c.lineWidth = te.outline * 2 * l.size / 130; c.strokeText(l.text, l.x, l.y + l.size * 0.05); }
-    c.fillStyle = l.color; c.fillText(l.text, l.x, l.y + l.size * 0.05);
+    const b = teBounds(c, l), w = b.w, h = b.h, yo = l.size * 0.05;
+    c.save(); c.translate(l.x, l.y); c.rotate((l.tilt || 0) * Math.PI / 180);
+    const shadowOn = () => { if (te.shadow) { c.shadowColor = "rgba(0,0,0,.6)"; c.shadowBlur = l.size * 0.12; c.shadowOffsetX = c.shadowOffsetY = l.size * 0.05; } };
+    const shadowOff = () => { c.shadowColor = "transparent"; c.shadowBlur = c.shadowOffsetX = c.shadowOffsetY = 0; };
+    shadowOn();
+    if (l.box) { const pad = l.size * 0.18; c.fillStyle = l.box; c.beginPath(); c.roundRect ? c.roundRect(-w / 2 - pad, -h / 2 - pad * 0.6, w + pad * 2, h + pad * 1.2, l.size * 0.08) : c.rect(-w / 2 - pad, -h / 2 - pad * 0.6, w + pad * 2, h + pad * 1.2); c.fill(); shadowOff(); }
+    const lw = te.outline * 2 * l.size / 130;
+    if (te.outline2 && te.outline) { c.strokeStyle = "#FFFFFF"; c.lineWidth = lw + l.size * 0.14; c.strokeText(l.text, 0, yo); shadowOff(); }
+    if (te.outline) { c.strokeStyle = te.outlineColor; c.lineWidth = lw; c.strokeText(l.text, 0, yo); shadowOff(); }
+    c.fillStyle = l.color; c.fillText(l.text, 0, yo);
+    c.restore();
     if (!target && te.drag === i) { c.strokeStyle = "rgba(79,140,255,.9)"; c.lineWidth = 3; c.setLineDash([10, 6]); c.strokeRect(b.x - 8, b.y - 8, b.w + 16, b.h + 16); c.setLineDash([]); }
   });
 }
@@ -1171,7 +1228,7 @@ async function teSave() {
   try {
     const r = await fetch(`/api/upload?kind=thumb&id=${state.pid}`, {method: "POST", headers: {"X-Token": TOKEN, "X-Filename": "thumb.jpg"}, body: blob});
     if (!r.ok) throw new Error((await r.json()).error || "저장 실패");
-    const keep = {scene: te.scene, outline: te.outline, outlineColor: te.outlineColor, box: te.box, shade: te.shade, bright: te.bright, lines: te.lines};
+    const keep = {scene: te.scene, outline: te.outline, outlineColor: te.outlineColor, outline2: !!te.outline2, shadow: !!te.shadow, shade: te.shade, bright: te.bright, lines: te.lines};
     await save({thumb_edit: keep}, true);
     $("#dlg").close(); $("#dlg").style.width = ""; await loadProject(); render(); toast("썸네일을 저장했어요 (1번)");
   } catch (e) { fail(e); }
