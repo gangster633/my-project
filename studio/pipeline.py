@@ -40,7 +40,8 @@ class Ctx:
 # ---------------- 기본값 ----------------
 
 # 쇼츠 끝에 띄우는 안내 문구 (휴대폰 쇼츠 화면 아래쪽의 '관련 동영상' 버튼으로 롱폼에 오게)
-SHORTS_CTA_TEXT = "전체 이야기는\n▼ 아래 버튼에서"
+SHORTS_CTA_TEXT = "전체 영상 보기\n▼ 아래 링크 클릭"
+OLD_CTA_TEXTS = ("전체 이야기는\n▼ 아래 버튼에서",)
 
 DEFAULT_VOICE = {"provider": "", "id": "", "name": "", "speed": 1.0, "style": "", "trim": True,
                  "compress": True, "min_silence": 0.5, "keep_silence": 0.3, "silence_db": -50,
@@ -76,6 +77,9 @@ def upgrade(p):
     for key, default in (("voice", DEFAULT_VOICE), ("sub", DEFAULT_SUB), ("video", DEFAULT_VIDEO)):
         for k, v in default.items():
             p[key].setdefault(k, v)
+    # 예전 기본 문구를 그대로 쓰던 프로젝트는 새 기본 문구로 (직접 고친 문구는 그대로 둔다)
+    if p["video"].get("shorts_cta_text") in OLD_CTA_TEXTS:
+        p["video"]["shorts_cta_text"] = SHORTS_CTA_TEXT
     return p
 
 
