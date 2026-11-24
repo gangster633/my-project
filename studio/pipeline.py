@@ -53,7 +53,7 @@ DEFAULT_VIDEO = {"resolution": "1920x1080", "fps": 30, "effect": "ai", "strength
                  "trans_dur": 0.5, "subtitles": True, "fill": "freeze", "logo": "", "logo_scale": 0.12, "logo_x": 0.96,
                  "logo_y": 0.04, "logo_opacity": 0.9, "bgm": "", "bgm_volume": 0.22, "bgm_duck": True,
                  "shorts_cta": True, "shorts_cta_text": SHORTS_CTA_TEXT, "shorts_cta_sec": 4,
-                 "shorts_speed": 1.15}
+                 "shorts_speed": 1.15, "shorts_fill": "crop"}
 
 
 def new_project(name, category="경제"):
@@ -731,6 +731,8 @@ def run_render(p, cfg, ctx, folder, lang="ko", shorts=False):
                 b += 1
         t_from, t_to = sents[a]["start"], min(sents[b]["end"] + 0.6, sents[a]["start"] + 59.5 * speed)
     # 이 구간에 걸치는 장면만, 경계를 구간에 맞게 자른다
+    # 쇼츠 화면: crop = 가로 그림의 가운데를 잘라 9:16 화면을 꽉 채움(기본), blur = 그림 전체를 가운데 두고 위아래 흐린 배경
+    vblur = H > W and not (shorts and vcfg.get("shorts_fill", "crop") == "crop")
     picked = [(i, max(s, t_from) - t_from, min(e, t_to) - t_from) for i, (s, e) in enumerate(times) if e > t_from and s < t_to]
     total = t_to - t_from
     work = folder / ("build_shorts" if shorts else f"build_{lang}")
@@ -760,7 +762,7 @@ def run_render(p, cfg, ctx, folder, lang="ko", shorts=False):
             src = folder / ph
         motion = _motion(p, i, sc)
         key = hashlib.sha1(json.dumps([str(src), src.stat().st_mtime, round(dur, 3), motion, W, H, fps, is_video,
-                                       vcfg.get("fill"), vcfg.get("strength"), shorts, render.MOTION_VERSION]).encode()).hexdigest()[:12]
+                                       vcfg.get("fill"), vcfg.get("strength"), shorts, vblur, render.MOTION_VERSION]).encode()).hexdigest()[:12]
         name = f"c{i:03d}_{key}.mp4"
         used.add(name)
         if not (cdir / name).exists():  # 바뀐 장면만 다시 만든다
@@ -774,7 +776,7 @@ def run_render(p, cfg, ctx, folder, lang="ko", shorts=False):
         ctx.check()
         src, name, dur, motion, is_video = job
         render.scene_clip(src, str(cdir / name), dur, motion, W, H, fps, is_video, vcfg.get("fill", "freeze"),
-                          vertical_blur=H > W, workdir=cdir, strength=float(vcfg.get("strength") or 0.12))
+                          vertical_blur=vblur, workdir=cdir, strength=float(vcfg.get("strength") or 0.12))
 
     # CPU 코어 수만큼 동시에 만들 때 가장 빠르다(4코어 측정: 2개씩보다 1.3배)
     workers = max(1, min(int(cfg.get("render_workers") or (os.cpu_count() or 2)), 8))

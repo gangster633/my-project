@@ -425,7 +425,7 @@ def write_ass(path, cues, st, w, h, title=None, title_end=None, cta=None):
         "ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
         f"Style: Text,{font},{text_style}",
         f"Style: Box,{font},{box_style}",
-        f"Style: Title,{font},{int(w * 0.075)},{_ass_color(st.get('title_color', '#ffffff'))},&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,{w * 0.006:.1f},0,8,{int(w * 0.06)},{int(w * 0.06)},{int(h * 0.09)},1",
+        f"Style: Title,{font},{int(w * 0.075)},{_ass_color(st.get('title_color', '#ffffff'))},&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,{w * 0.01:.1f},{w * 0.004:.1f},8,{int(w * 0.06)},{int(w * 0.06)},{int(h * 0.09)},1",
         f"Style: Cta,{font},{int(w * 0.068)},&H0000E6FF,&H000000FF,&H40000000,&H40000000,-1,0,0,0,100,100,0,0,3,{w * 0.024:.1f},0,5,0,0,0,1",
         "", "[Events]", "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
     ]
