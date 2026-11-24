@@ -264,6 +264,8 @@ def default_font():
 
 def _dt_text(workdir, name, text):
     p = Path(workdir) / name
+    # 글자는 drawtext 의 expansion=none 과 함께 쓴다. 기본값이면 "30%" 의 % 를 특수 기호(%{...})로 읽어
+    # 줄이 사라지거나(FFmpeg 6) "Stray %" 오류가 난다(FFmpeg 7 이상).
     p.write_text(text, encoding="utf-8")
     return name
 
@@ -277,9 +279,9 @@ def placeholder_image(workdir, out_name, text, idx, w, h, font_rel):
     tf = _dt_text(workdir, f"_ph_{idx}.txt", wrapped)
     num = _dt_text(workdir, f"_phn_{idx}.txt", f"장면 {idx + 1}")
     fs = int(h * 0.055)
-    vf = (f"drawtext=fontfile={font_rel}:textfile={tf}:fontcolor=white:fontsize={fs}:line_spacing={fs // 3}:"
+    vf = (f"drawtext=expansion=none:fontfile={font_rel}:textfile={tf}:fontcolor=white:fontsize={fs}:line_spacing={fs // 3}:"
           f"x=(w-text_w)/2:y=(h-text_h)/2:box=0,"
-          f"drawtext=fontfile={font_rel}:textfile={num}:fontcolor=white@0.6:fontsize={fs // 2}:x={fs // 2}:y={fs // 2}")
+          f"drawtext=expansion=none:fontfile={font_rel}:textfile={num}:fontcolor=white@0.6:fontsize={fs // 2}:x={fs // 2}:y={fs // 2}")
     run(["-f", "lavfi", "-i", f"gradients=s={w}x{h}:c0={a}:c1={b}:x0=0:y0=0:x1={w}:y1={h}:d=1",
          "-frames:v", "1", "-vf", vf, out_name], cwd=workdir)
 
@@ -580,6 +582,6 @@ def thumbnail(workdir, src_rel, out_rel, text, font_rel, theme, w=1280, h=720):
         tf = _dt_text(workdir, f"_th_{i}.txt", line)
         y = f"h-{total_h + h * 0.07:.0f}+{i * fs * 1.15:.0f}"
         box = f":box=1:boxcolor={theme['box']}@0.95:boxborderw={int(fs * 0.18)}" if theme.get("box") else ""
-        filters.append(f"drawtext=fontfile={font_rel}:textfile={tf}:fontsize={fs}:fontcolor={theme['color']}:"
+        filters.append(f"drawtext=expansion=none:fontfile={font_rel}:textfile={tf}:fontsize={fs}:fontcolor={theme['color']}:"
                        f"borderw={max(3, fs // 14)}:bordercolor={theme['border']}:x=(w-text_w)/2:y={y}{box}")
     run(["-i", src_rel, "-vf", ",".join(filters), "-frames:v", "1", "-q:v", "2", out_rel], cwd=workdir)
