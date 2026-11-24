@@ -754,6 +754,10 @@ function helperDraw(h) {
   const done = scenes.filter(s => s.image || s.video).length;
   const last = h.added[h.added.length - 1];
   $("#h_body").innerHTML = `
+    ${t !== null && t !== undefined ? `<div class="hint" style="margin-bottom:10px"><b>한 번에 붙여 넣기 (추천)</b> · 빈 장면 전부를 한 번에 보내고, 그다음부터는 '다음'만 보내요.
+      <div class="row" style="gap:8px;margin-top:6px"><button onclick="helperBatch(${t})">빈 장면 모두 한 번에 복사${HELPER_SITES[$("#h_site").value][1] ? " + 사이트 열기" : ""}</button>
+        <button class="ghost" onclick="helperNext()">'다음' 복사</button></div>
+      <span class="tiny dim">그림 사이트의 <b>새 채팅</b>에 붙여 넣으면 장면 ${t + 1}부터 그려요. 그림이 나올 때마다 다운로드 → '다음' 붙여 넣기. 다운로드한 순서대로 빈 장면에 자동으로 들어가요. 그림이 사진처럼 나오면 '다음' 대신 "앞 그림들과 같은 웹툰 그림으로 다시"라고 보내세요.</span></div>` : ""}
     <div class="row" style="gap:8px"><button class="ghost" onclick="helperIntro()">① 시작 지시문 복사 (대화 처음 한 번)</button>
       ${t === null || t === undefined ? `<span class="ok">모든 장면에 그림이 들어갔어요 🎉</span>` :
         `<button onclick="helperCopy(${t})">② 장면 ${t + 1} 프롬프트 복사${HELPER_SITES[$("#h_site").value][1] ? " + 사이트 열기" : ""}</button>
@@ -790,6 +794,8 @@ function helperWatch() {
 function openSite() { const u = HELPER_SITES[$("#h_site").value][1]; if (u) window.open(u, "vw_imagesite"); }
 function helperIntro() { return copyFrom(promptOf("helper_intro")).then(openSite); }
 function helperCopy(i) { return copyFrom(promptOf(`scene:${i}`)).then(openSite); }
+function helperBatch(t) { return copyFrom(promptOf(`helper_batch:${t}`)).then(openSite); }
+function helperNext() { return copyFrom(promptOf("helper_next")); }
 async function helperSkip(i) {
   const n = state.p.storyboard.scenes.length;
   let k = (i + 1) % n;
