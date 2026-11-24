@@ -814,7 +814,7 @@ def run_render(p, cfg, ctx, folder, lang="ko", shorts=False):
         else:
             cues_ass = cues
         if shorts:
-            scfg.update(position="bottom", size=float(scfg.get("size", 17)) * 1.7, margin=0.26)
+            scfg.update(position="bottom", size=float(scfg.get("size", 17)) * 1.5, margin=0.26)
             title = ((p.get("meta") or {}).get("shorts") or {}).get("title") or p.get("name", "")
             title = "\n".join(textutil.subtitle_chunks(title, 12)[:2])
         if (fdir := folder / "fonts").exists():
