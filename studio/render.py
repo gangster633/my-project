@@ -426,7 +426,7 @@ def write_ass(path, cues, st, w, h, title=None, title_end=None, cta=None):
         f"Style: Text,{font},{text_style}",
         f"Style: Box,{font},{box_style}",
         f"Style: Title,{font},{int(w * 0.075)},{_ass_color(st.get('title_color', '#ffffff'))},&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,{w * 0.01:.1f},{w * 0.004:.1f},8,{int(w * 0.06)},{int(w * 0.06)},{int(h * 0.09)},1",
-        f"Style: Cta,{font},{int(w * 0.068)},&H0000E6FF,&H000000FF,&H40000000,&H40000000,-1,0,0,0,100,100,0,0,3,{w * 0.024:.1f},0,5,0,0,0,1",
+        f"Style: Cta,{font},{int(w * 0.1)},&H0000E6FF,&H000000FF,&H40000000,&H40000000,-1,0,0,0,100,100,0,0,3,{w * 0.03:.1f},0,5,0,0,0,1",
         "", "[Events]", "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
     ]
     accent = _ass_color(st.get("accent", "#ffd400"))
@@ -436,7 +436,7 @@ def write_ass(path, cues, st, w, h, title=None, title_end=None, cta=None):
         lines.append(f"Dialogue: 2,{_ts(0)},{_ts(title_end or 3600)},Title,,0,0,0,,{t}")
     if cta:
         t = cta[0].replace("\\", "").replace("{", "(").replace("}", ")").replace("\r", "").replace("\n", "\\N")
-        lines.append(f"Dialogue: 3,{_ts(cta[1])},{_ts(cta[2])},Cta,,0,0,0,,{{\\pos({w // 2},{int(h * 0.56)})\\fad(350,0)}}{t}")
+        lines.append(f"Dialogue: 3,{_ts(cta[1])},{_ts(cta[2])},Cta,,0,0,0,,{{\\pos({w // 2},{int(h * 0.5)})\\fad(350,0)}}{t}")
     for s, e, text in cues:
         t = text.replace("\\", "").replace("{", "(").replace("}", ")").replace("\n", "\\N")
         if box:
