@@ -344,6 +344,8 @@ def scene_has_people(sc):
 
 
 NO_PEOPLE_EN = "No people, no human figures, no hands"
+# 사람 없이 물건·풍경만 있는 장면은 그림 화풍이어도 사진처럼 나오기 쉽다(케이크, 동전 등). 만화 그림이라고 한 번 더 못 박는다.
+OBJECT_GUARD = "drawn as a cartoon panel like the other scenes, objects with clean outlines and flat cel colors, simple background, not a product photo"
 _CHAR_NOUN = re.compile(r"\b(woman|man|girl|boy|grandmother|grandfather|lady|gentleman)\b", re.I)
 _PRONOUN = {"woman": r"she|her", "girl": r"she|her", "lady": r"she|her", "grandmother": r"she|her",
             "man": r"he|his|him", "boy": r"he|his|him", "gentleman": r"he|his|him", "grandfather": r"he|his|him"}
@@ -449,6 +451,8 @@ def image_prompt(p, scene):
     parts = [scene_text(p, scene)]
     if not scene_has_people(scene):
         parts.append(NO_PEOPLE_EN)
+        if is_illustration(p):
+            parts.append(OBJECT_GUARD)
     elif scene_has_character(p, scene):
         parts.append(f"Recurring character (keep identical): {char}")
     parts.append(f"Art style: {style_prompt(p)}" + (f", {ILLUST_GUARD}" if is_illustration(p) else ""))
@@ -567,13 +571,59 @@ def helper_scene_prompt(p, i):
     people = scene_has_people(sc)
     lines = [f"장면 {i + 1}: {sc.get('visual', '')}", scene_text(p, sc)]
     if not people:
-        lines.append(NO_PEOPLE_EN)
+        lines.append(NO_PEOPLE_EN + (f", {OBJECT_GUARD}" if is_illustration(p) else ""))
     elif scene_has_character(p, sc):
         lines.append(f"Recurring character (keep identical): {char}")
     lines.append(f"Art style: {style_prompt(p)}" + (f", {ILLUST_GUARD}" if is_illustration(p) else ""))
     lines.append(f"({ratio}, 처음과 같은 그림체" + (", 사진 말고 그림으로" if is_illustration(p) else "")
                  + (", 사람 없이" if not people else "") + ", 글자 없이 그려 주세요)")
     return "\n".join(lines)
+
+
+HELPER_NEXT = "다음 장면을 그려 주세요. 처음과 같은 그림체로"
+
+
+def helper_next(p):
+    """한 번에 붙여 넣기 방식에서 그림을 한 장 받을 때마다 보내는 짧은 말. 그림체를 잊지 않게 다시 적는다."""
+    return HELPER_NEXT + (", 손으로 그린 2D 그림으로(사진 아님)" if is_illustration(p) else "") + ", 그림 안에 글자 없이."
+
+
+def helper_batch(p, start=0):
+    """반자동 도우미: 빈 장면 전체를 한 번에 붙여 넣는 지시문. 그다음부터는 '다음'만 보내면 된다.
+    그림은 내려받은 순서대로 빈 장면에 들어가므로 목록도 같은 순서(start부터, 빈 장면만)로 만든다."""
+    scenes = p["storyboard"]["scenes"]
+    n = len(scenes)
+    order = [(start + k) % n for k in range(n)]
+    todo = [i for i in order if not scenes[i].get("image") and not scenes[i].get("video")]
+    if not todo:
+        return "모든 장면에 그림이 들어갔어요."
+    char = p["style"].get("character", "").strip()
+    ratio = "가로 16:9" if _res(p)[0] >= _res(p)[1] else "세로 9:16"
+    illu = is_illustration(p)
+    head = [f"유튜브 영상에 쓸 그림 {len(todo)}장을 아래 목록 순서대로 그려 주세요.",
+            "- 한 번에 한 장만 그려 주세요. 제가 '다음'이라고 하면 목록의 다음 장면을 그려 주세요.",
+            "- 그림을 보낼 때 답글 첫 줄에 '장면 번호'만 적어 주세요. 그림 안에는 번호나 글자를 넣지 마세요.",
+            f"- 모든 그림의 그림체: {style_prompt(p)}" + (f", {ILLUST_GUARD}" if illu else ""),
+            f"- 비율: {ratio}"]
+    if illu:
+        head.append("- 사람 없이 물건이나 풍경만 있는 장면도 사진처럼 그리지 말고, 다른 장면과 같은 만화 그림으로 그려 주세요.")
+    if char:
+        head.append(f"- 반복해서 나오는 인물(외형을 항상 똑같이, '주인공'이라고 적힌 장면에만): {char}")
+    head.append("- 그림 안에 글자, 자막, 워터마크를 넣지 마세요." if not p["style"].get("allow_text")
+                else "- 그림 안의 글자는 짧은 한글만 써 주세요.")
+    head.append("")
+    head.append("장면 목록")
+    body = []
+    for i in todo:
+        sc = scenes[i]
+        line = f"[장면 {i + 1}] {sc.get('visual', '')}\n{scene_text(p, sc)}"
+        if not scene_has_people(sc):
+            line += f"\n{NO_PEOPLE_EN}" + (f", {OBJECT_GUARD}" if illu else "")
+        elif char and scene_has_character(p, sc):
+            line += "\n주인공이 나오는 장면"
+        body.append(line)
+    return ("\n".join(head) + "\n" + "\n\n".join(body)
+            + f"\n\n이해했으면 바로 [장면 {todo[0] + 1}]부터 그려 주세요.")
 
 
 # ---------------- 6. 영상 ----------------

@@ -34,7 +34,7 @@ import prompts  # noqa: E402
 import render  # noqa: E402
 
 APP_NAME = "AI 영상 공방"
-VERSION = "1.3.16"
+VERSION = "1.3.17"
 DATA_DIR = Path(os.environ.get("VIDEO_WORKSHOP_HOME") or (Path(os.environ.get("APPDATA", Path.home())) / "VideoWorkshop"))
 PROJECTS = DATA_DIR / "projects"
 CONFIG = DATA_DIR / "config.json"
@@ -327,6 +327,10 @@ def prompt_for(p, step, cfg):
         return pipeline.all_prompts_text(p)
     elif step == "helper_intro":
         return pipeline.helper_intro(p)
+    elif step.startswith("helper_batch"):
+        return pipeline.helper_batch(p, int(step.split(":")[1]) if ":" in step else 0)
+    elif step == "helper_next":
+        return pipeline.helper_next(p)
     elif step.startswith("scene:"):
         return pipeline.helper_scene_prompt(p, int(step.split(":")[1]))
     elif step.startswith("style:"):
