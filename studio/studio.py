@@ -34,7 +34,7 @@ import prompts  # noqa: E402
 import render  # noqa: E402
 
 APP_NAME = "AI 영상 공방"
-VERSION = "1.3.21"
+VERSION = "1.3.22"
 DATA_DIR = Path(os.environ.get("VIDEO_WORKSHOP_HOME") or (Path(os.environ.get("APPDATA", Path.home())) / "VideoWorkshop"))
 PROJECTS = DATA_DIR / "projects"
 CONFIG = DATA_DIR / "config.json"
@@ -581,6 +581,7 @@ class Handler(BaseHTTPRequestHandler):
     def route_post(self, path, d):
         if path == "/api/quit":
             self.send(HTTPStatus.OK, {"ok": True})
+            render.kill_all()  # 돌고 있던 FFmpeg 도 함께 끈다 (남으면 파일을 붙잡아 다음 작업이 실패한다)
             threading.Thread(target=lambda: (time.sleep(0.3), os._exit(0)), daemon=True).start()
             return
         if path == "/api/config":
