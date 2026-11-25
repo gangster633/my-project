@@ -334,7 +334,9 @@ _PEOPLE = re.compile(r"\b(woman|women|man|men|person|people|she|he|her|his|him|t
                      r"kids?|girl|boy|technician|worker|staff|hands?|fingers?|face|faces|character|family|crowd|customer|"
                      r"elderly|grandmother|grandfather|mother|father|parents?|student|doctor|nurse|caregiver|driver|owner|"
                      r"vendors?|sellers?|merchants?|teller|cashier|clerk|farmers?|neighbou?rs?|villagers?|residents?|"
-                     r"volunteers?|delivery (person|man|driver)|passers?-?by|audience|employees?|officials?|elders?)\b", re.I)
+                     r"volunteers?|delivery (person|man|driver)|passers?-?by|audience|employees?|officials?|elders?|"
+                     r"scholars?|examinees?|examiners?|soldiers?|guards?|servants?|helpers?|ministers?|king|queen|monks?|"
+                     r"fishermen|fisherman|porters?|craftsmen|craftsman|court lad(y|ies)|musicians?|travell?ers?)\b", re.I)
 
 
 def scene_has_people(sc):
