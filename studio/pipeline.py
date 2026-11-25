@@ -638,6 +638,15 @@ def helper_batch(p, start=0):
 TRANS_CYCLE = ["fade", "dissolve", "slideleft", "smoothleft", "wipeleft", "circleopen", "fadeblack", "zoomin", "slideright"]
 
 
+def _try_unlink(path):
+    """쓰지 않는 옛 파일 지우기. 윈도우에서 다른 프로그램(백신, 이전 작업의 FFmpeg 등)이 붙잡고 있으면
+    지우지 못하는데(WinError 32), 그건 작업 실패가 아니니 건너뛰고 다음에 다시 지운다."""
+    try:
+        Path(path).unlink()
+    except OSError:
+        pass
+
+
 def _res(p, shorts=False):
     if shorts:
         return 1080, 1920
@@ -660,7 +669,7 @@ def _ensure_font(p, folder):
     fdir.mkdir(exist_ok=True)
     for old in fdir.iterdir():
         if old.name != Path(src).name:
-            old.unlink()
+            _try_unlink(old)
     dst = fdir / Path(src).name
     if not dst.exists():
         shutil.copy2(src, dst)
@@ -800,7 +809,7 @@ def run_render(p, cfg, ctx, folder, lang="ko", shorts=False):
             raise
     for old in cdir.glob("*.mp4"):
         if old.name not in used:
-            old.unlink()
+            _try_unlink(old)
     # 소리: 구간 잘라내기
     nar = folder / audio["narration"]
     if shorts:

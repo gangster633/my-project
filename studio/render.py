@@ -92,6 +92,18 @@ def ffmpeg_ok():
         return False
 
 
+# 지금 돌고 있는 FFmpeg 프로세스. 프로그램을 끌 때(새 버전 실행 등) 함께 끄지 않으면 남아서 파일을 붙잡는다(WinError 32).
+ACTIVE = set()
+
+
+def kill_all():
+    for p in list(ACTIVE):
+        try:
+            p.kill()
+        except Exception:
+            pass
+
+
 def run(args, cwd=None, timeout=None, progress=None, total=None):
     """ffmpeg 실행. progress(초) 콜백이 있으면 진행 시간을 알려 준다."""
     cmd = [tool("ffmpeg"), "-hide_banner", "-y", "-loglevel", "error"]
@@ -99,13 +111,23 @@ def run(args, cwd=None, timeout=None, progress=None, total=None):
         cmd += ["-progress", "pipe:1", "-nostats"]
     cmd += [str(a) for a in args]
     if not progress:
-        p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, encoding="utf-8", errors="replace",
-                           timeout=timeout, creationflags=NOWIN)
+        p = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                             encoding="utf-8", errors="replace", creationflags=NOWIN)
+        ACTIVE.add(p)
+        try:
+            _, stderr = p.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            p.kill()
+            p.communicate()
+            raise
+        finally:
+            ACTIVE.discard(p)
         if p.returncode != 0:
-            raise RenderError("ffmpeg 오류: " + p.stderr.strip()[-1200:])
+            raise RenderError("ffmpeg 오류: " + (stderr or "").strip()[-1200:])
         return
     p = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                          encoding="utf-8", errors="replace", creationflags=NOWIN)
+    ACTIVE.add(p)
     err = []
     import threading
     t = threading.Thread(target=lambda: err.extend(p.stderr), daemon=True)
@@ -117,6 +139,7 @@ def run(args, cwd=None, timeout=None, progress=None, total=None):
             except ValueError:
                 pass
     p.wait()
+    ACTIVE.discard(p)
     t.join(2)
     if p.returncode != 0:
         raise RenderError("ffmpeg 오류: " + "".join(err).strip()[-1200:])
