@@ -397,6 +397,35 @@ def _ts(t):
     return f"{int(h)}:{int(m):02d}:{s:05.2f}"
 
 
+def _text_units(line):
+    """한 줄의 대략적인 너비(글자 크기 배수). 한글·기호는 1, 영문·숫자는 0.6, 띄어쓰기는 0.3."""
+    u = 0.0
+    for ch in line:
+        u += 0.3 if ch == " " else (0.6 if ord(ch) < 128 else 1.0)
+    return max(u, 1.0)
+
+
+def _cta_size(cta, w, st):
+    """쇼츠 끝 안내 문구 글자 크기(px). 원하는 크기(화면 폭 비율)로 하되, 가장 긴 줄이 화면 폭(띠 여백 포함)을 넘지 않게 줄인다."""
+    want = float(st.get("cta_size", 0.13))
+    if not cta:
+        return int(w * want)
+    return int(w * min(want, _cta_fit(cta)))
+
+
+def _cta_fit(cta):
+    longest = max(_text_units(l) for l in str(cta[0]).split("\n"))
+    return 0.86 / longest  # 화면 폭의 86% 안에 들어가게 (띠 여백 몫을 뺀 값)
+
+
+def _cta_scale_y(cta, st):
+    """폭이 꽉 차서 더 키울 수 없으면 글자를 세로로 늘려 더 크게 보이게 한다(최대 1.4배)."""
+    if not cta:
+        return 100
+    want, fit = float(st.get("cta_size", 0.13)), _cta_fit(cta)
+    return int(min(max(want / fit, 1.0), 1.4) * 100)
+
+
 def write_ass(path, cues, st, w, h, title=None, title_end=None, cta=None):
     """cues: [(start, end, text)]. st: 자막 스타일 설정. title: 쇼츠 위쪽에 고정할 제목.
     cta: (문구, 시작, 끝) 쇼츠 끝에 화면 가운데 아래쪽에 띄우는 안내 문구."""
@@ -425,8 +454,8 @@ def write_ass(path, cues, st, w, h, title=None, title_end=None, cta=None):
         "ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
         f"Style: Text,{font},{text_style}",
         f"Style: Box,{font},{box_style}",
-        f"Style: Title,{font},{int(w * 0.075)},{_ass_color(st.get('title_color', '#ffffff'))},&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,{w * 0.01:.1f},{w * 0.004:.1f},8,{int(w * 0.06)},{int(w * 0.06)},{int(h * 0.09)},1",
-        f"Style: Cta,{font},{int(w * 0.1)},&H0000E6FF,&H000000FF,&H40000000,&H40000000,-1,0,0,0,100,100,0,0,3,{w * 0.03:.1f},0,5,0,0,0,1",
+        f"Style: Title,{font},{int(w * float(st.get('title_size', 0.075)))},{_ass_color(st.get('title_color', '#ffffff'))},&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,{w * 0.01:.1f},{w * 0.004:.1f},8,{int(w * 0.06)},{int(w * 0.06)},{int(h * 0.09)},1",
+        f"Style: Cta,{font},{_cta_size(cta, w, st)},&H0000E6FF,&H000000FF,&H40000000,&H40000000,-1,0,0,0,100,{_cta_scale_y(cta, st)},0,0,3,{w * 0.03:.1f},0,5,0,0,0,1",
         "", "[Events]", "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
     ]
     accent = _ass_color(st.get("accent", "#ffd400"))
