@@ -940,7 +940,7 @@ function pickAsset(kind) {
   inp.click();
 }
 async function saveCta() {
-  await save({video: {...state.p.video, shorts_cta: $("#sh_cta").checked, shorts_cta_text: $("#sh_cta_txt").value, shorts_cta_sec: +$("#sh_cta_sec").value, shorts_speed: +$("#sh_spd").value, shorts_fill: $("#sh_fill").value}}, true);
+  await save({video: {...state.p.video, shorts_cta: $("#sh_cta").checked, shorts_cta_text: $("#sh_cta_txt").value, shorts_cta_sec: +$("#sh_cta_sec").value, shorts_speed: +$("#sh_spd").value, shorts_fill: $("#sh_fill").value, shorts_cta_size: +$("#sh_cs").value, shorts_title_size: +$("#sh_ts").value, shorts_title_color: $("#sh_tc").value}}, true);
   toast("쇼츠 설정을 저장했어요. 쇼츠를 다시 만들면 들어가요");
 }
 async function clearAsset(kind) { await save({video: {...videoForm().video, [kind]: ""}}, true); await loadProject(); viewVideo(); }
@@ -966,11 +966,17 @@ function viewExport() {
         <div class="row" style="margin-top:8px"><a href="${fileUrl(out.video.file, p.name + ".mp4")}"><button>MP4 내려받기</button></a><a href="${fileUrl(out.video.srt, p.name + ".srt")}"><button class="ghost">SRT 자막</button></a>
         ${state.cfg.platform === "win32" ? `<button class="ghost" onclick="api('/api/open_folder',{id:state.pid,sub:'out'})">폴더 열기</button>` : ""}</div>`
         : `<div class="empty">아직 영상이 없어요. <button onclick="go('video')">영상 만들기</button></div>`}</div>
-      <div class="panel"><h2>쇼츠 (세로 1080×1920)</h2><p class="tiny dim">가장 강한 40~55초 구간을 골라 세로 영상으로 만들어요. 가로 그림은 가운데를 잘라 세로 화면을 꽉 채워요(아래 "쇼츠 화면"에서 바꿀 수 있어요).${m?.shorts?.title ? `<br>추천 구간: 문장 ${m.shorts.first + 1}~${m.shorts.last + 1} · “${esc(m.shorts.title)}”` : " 업로드 정보를 먼저 만들면 AI가 구간을 골라요. 없으면 도입부를 써요."}</p>
+      <div class="panel"><h2>쇼츠 (세로 1080×1920)</h2><p class="tiny dim">가장 강한 35~45초 구간을 골라(쇼츠 속도를 높이면 30~40초) 세로 영상으로 만들어요. 가로 그림은 가운데를 잘라 세로 화면을 꽉 채워요(아래 "쇼츠 화면"에서 바꿀 수 있어요).${m?.shorts?.title ? `<br>추천 구간: 문장 ${m.shorts.first + 1}~${m.shorts.last + 1} · “${esc(m.shorts.title)}”` : " 업로드 정보를 먼저 만들면 AI가 구간을 골라요. 없으면 도입부를 써요."}</p>
         <div style="margin:8px 0 10px;padding:10px;border:1px solid var(--line);border-radius:10px">
           <label class="row tiny"><input type="checkbox" id="sh_cta" ${p.video.shorts_cta !== false ? "checked" : ""} onchange="saveCta()"> 끝에 롱폼 안내 문구 띄우기</label>
           <div class="row" style="margin-top:6px;align-items:flex-start"><textarea id="sh_cta_txt" rows="2" style="flex:1;min-width:0" onchange="saveCta()">${esc(p.video.shorts_cta_text ?? "전체 영상 보기\n▼ 아래 링크 클릭")}</textarea>
             <label class="field" style="width:90px"><span>마지막 <b id="sh_cta_sv">${p.video.shorts_cta_sec ?? 4}</b>초</span><input type="range" id="sh_cta_sec" min="2" max="8" step="1" value="${p.video.shorts_cta_sec ?? 4}" oninput="$('#sh_cta_sv').textContent=this.value" onchange="saveCta()"></label></div>
+          <div class="grid3" style="margin-top:8px">
+            <label class="field"><span>안내 문구 크기 <b id="sh_cs_v">${Math.round((p.video.shorts_cta_size ?? 0.13) * 100)}%</b></span><input type="range" id="sh_cs" min="0.07" max="0.16" step="0.01" value="${p.video.shorts_cta_size ?? 0.13}" oninput="$('#sh_cs_v').textContent=Math.round(this.value*100)+'%'" onchange="saveCta()"></label>
+            <label class="field"><span>제목 글자 크기 <b id="sh_ts_v">${Math.round((p.video.shorts_title_size ?? 0.08) * 100)}%</b></span><input type="range" id="sh_ts" min="0.05" max="0.12" step="0.005" value="${p.video.shorts_title_size ?? 0.08}" oninput="$('#sh_ts_v').textContent=Math.round(this.value*100)+'%'" onchange="saveCta()"></label>
+            <label class="field"><span>제목 글자 색</span><input type="color" id="sh_tc" value="${p.video.shorts_title_color || "#ffffff"}" onchange="saveCta()"></label>
+          </div>
+          <p class="tiny dim" style="margin:4px 0 0">크기는 화면 폭 대비예요. 안내 문구는 가장 긴 줄이 화면을 넘지 않는 데까지만 커져요. 쇼츠 위쪽 제목은 쇼츠 썸네일(첫 화면)에도 보여요.</p>
           <label class="field" style="margin-top:8px"><span>쇼츠 화면</span><select id="sh_fill" onchange="saveCta()"><option value="crop">꽉 채우기 9:16 (그림 가운데를 잘라 채움)</option><option value="blur" ${p.video.shorts_fill === "blur" ? "selected" : ""}>그림 전체 + 위아래 흐린 배경</option></select></label>
           <label class="field" style="margin-top:8px"><span>쇼츠 읽는 속도 <b id="sh_spd_v">${(p.video.shorts_speed ?? 1.15).toFixed(2)}배</b> (롱폼 음성을 빠르게, 목소리 높이는 그대로)</span><input type="range" id="sh_spd" min="1" max="1.4" step="0.05" value="${p.video.shorts_speed ?? 1.15}" oninput="$('#sh_spd_v').textContent=(+this.value).toFixed(2)+'배'" onchange="saveCta()"></label>
           <p class="tiny dim" style="margin:6px 0 0">휴대폰 쇼츠 화면 아래쪽에 롱폼으로 가는 '관련 동영상' 버튼이 나와요(유튜브 스튜디오에서 쇼츠에 롱폼을 연결해 두세요). 줄을 바꾸면 두 줄로 나와요. 바꾼 뒤 쇼츠를 다시 만들어야 들어가요.</p></div>

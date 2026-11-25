@@ -264,7 +264,7 @@ def build_meta(script, sentences, chapters):
 - tags: 검색 태그 15개
 - thumb_texts: 썸네일에 크게 넣을 짧은 문구 3개 (각 12자 이내)
 - pinned_comment: 시청자 참여를 부르는 고정 댓글 한 개
-- shorts: 쇼츠로 잘라 쓸 가장 강한 연속 구간(아래 문장 번호 first~last, 낭독 40~55초 분량)과 쇼츠 제목
+- shorts: 쇼츠로 잘라 쓸 가장 강한 연속 구간(아래 문장 번호 first~last, 낭독 35~45초 분량, 답을 다 말하지 말고 궁금증이 남는 곳에서 끊기)과 쇼츠 제목
 
 챕터(참고): {', '.join(chapters) or '없음'}
 

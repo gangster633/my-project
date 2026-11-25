@@ -54,7 +54,8 @@ DEFAULT_VIDEO = {"resolution": "1920x1080", "fps": 30, "effect": "ai", "strength
                  "trans_dur": 0.5, "subtitles": True, "fill": "freeze", "logo": "", "logo_scale": 0.12, "logo_x": 0.96,
                  "logo_y": 0.04, "logo_opacity": 0.9, "bgm": "", "bgm_volume": 0.22, "bgm_duck": True,
                  "shorts_cta": True, "shorts_cta_text": SHORTS_CTA_TEXT, "shorts_cta_sec": 4,
-                 "shorts_speed": 1.15, "shorts_fill": "crop"}
+                 "shorts_speed": 1.15, "shorts_fill": "crop",
+                 "shorts_cta_size": 0.13, "shorts_title_size": 0.08, "shorts_title_color": "#ffffff"}
 
 
 def new_project(name, category="경제"):
@@ -822,7 +823,17 @@ def run_render(p, cfg, ctx, folder, lang="ko", shorts=False):
         if shorts:
             scfg.update(position="bottom", size=float(scfg.get("size", 17)) * 1.5, margin=0.26)
             title = ((p.get("meta") or {}).get("shorts") or {}).get("title") or p.get("name", "")
-            title = "\n".join(textutil.subtitle_chunks(title, 12)[:2])
+            tsize = min(max(float(vcfg.get("shorts_title_size") or 0.08), 0.05), 0.12)
+            # 글자가 클수록 한 줄에 적게. 3줄을 넘으면 넘치지 않게 글자를 줄인다(제목이 잘리지 않게).
+            while True:
+                per_line = max(6, int(0.88 / tsize))
+                chunks = textutil.subtitle_chunks(title, per_line)
+                if len(chunks) <= 3 or tsize <= 0.05:
+                    break
+                tsize -= 0.005
+            title = "\n".join(chunks[:4])
+            scfg.update(title_size=tsize, title_color=vcfg.get("shorts_title_color") or "#ffffff",
+                        cta_size=float(vcfg.get("shorts_cta_size") or 0.13))
         if (fdir := folder / "fonts").exists():
             shutil.copytree(fdir, work / "fonts", dirs_exist_ok=True)
         render.write_ass(work / "subs.ass", cues_ass, scfg, W, H, title=title, title_end=total, cta=cta)
