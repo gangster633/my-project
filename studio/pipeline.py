@@ -638,6 +638,14 @@ def helper_batch(p, start=0):
 TRANS_CYCLE = ["fade", "dissolve", "slideleft", "smoothleft", "wipeleft", "circleopen", "fadeblack", "zoomin", "slideright"]
 
 
+def _clip_ok(path, dur):
+    """클립 길이가 장면 길이만큼 되는지. 짧으면 합친 영상이 그 지점에서 멈추고 자막도 사라진다."""
+    try:
+        return render.duration(path) >= dur - 0.25
+    except Exception:
+        return False
+
+
 def _try_unlink(path):
     """쓰지 않는 옛 파일 지우기. 윈도우에서 다른 프로그램(백신, 이전 작업의 FFmpeg 등)이 붙잡고 있으면
     지우지 못하는데(WinError 32), 그건 작업 실패가 아니니 건너뛰고 다음에 다시 지운다."""
@@ -781,6 +789,8 @@ def run_render(p, cfg, ctx, folder, lang="ko", shorts=False):
                                        vcfg.get("fill"), vcfg.get("strength"), shorts, vblur, render.MOTION_VERSION]).encode()).hexdigest()[:12]
         name = f"c{i:03d}_{key}.mp4"
         used.add(name)
+        if (cdir / name).exists() and not _clip_ok(cdir / name, dur):
+            _try_unlink(cdir / name)  # 이전에 도중에 끊겨 짧게 남은 클립은 버리고 다시 만든다
         if not (cdir / name).exists():  # 바뀐 장면만 다시 만든다
             todo.append((str(src), name, dur, motion, is_video))
         clips.append(f"clips/{name}")
@@ -795,6 +805,9 @@ def run_render(p, cfg, ctx, folder, lang="ko", shorts=False):
         part = cdir / (Path(name).stem + ".part.mp4")
         render.scene_clip(src, str(part), dur, motion, W, H, fps, is_video, vcfg.get("fill", "freeze"),
                           vertical_blur=vblur, workdir=cdir, strength=float(vcfg.get("strength") or 0.12))
+        if not _clip_ok(part, dur):
+            _try_unlink(part)
+            raise render.RenderError(f"{name[1:4].lstrip('0') or '0'}번째 장면 클립이 제대로 만들어지지 않았습니다. 그 장면 그림을 다시 넣어 보세요.")
         os.replace(part, cdir / name)
 
     # CPU 코어 수만큼 동시에 만들 때 가장 빠르다(4코어 측정: 2개씩보다 1.3배)
