@@ -791,8 +791,11 @@ def run_render(p, cfg, ctx, folder, lang="ko", shorts=False):
     def make_clip(job):
         ctx.check()
         src, name, dur, motion, is_video = job
-        render.scene_clip(src, str(cdir / name), dur, motion, W, H, fps, is_video, vcfg.get("fill", "freeze"),
+        # 임시 이름으로 만든 뒤 다 되면 바꾼다. 도중에 끄면 반쪽 클립이 완성본으로 남아 다음에 재사용되지 않게
+        part = cdir / (Path(name).stem + ".part.mp4")
+        render.scene_clip(src, str(part), dur, motion, W, H, fps, is_video, vcfg.get("fill", "freeze"),
                           vertical_blur=vblur, workdir=cdir, strength=float(vcfg.get("strength") or 0.12))
+        os.replace(part, cdir / name)
 
     # CPU 코어 수만큼 동시에 만들 때 가장 빠르다(4코어 측정: 2개씩보다 1.3배)
     workers = max(1, min(int(cfg.get("render_workers") or (os.cpu_count() or 2)), 8))
