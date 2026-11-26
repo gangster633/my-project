@@ -774,6 +774,10 @@ def run_render(p, cfg, ctx, folder, lang="ko", shorts=False):
         pre = 0 if (k == 0 or all_cut) else (T if trans[k] != "cut" else 0.04) / 2
         post = 0 if (k == len(picked) - 1 or all_cut) else (T if trans[k + 1] != "cut" else 0.04) / 2
         dur = (e - s) + pre + post
+        if not all_cut and k < len(picked) - 1:
+            # 전환(xfade)은 앞 클립이 전환 끝 지점보다 조금이라도 짧으면 거기서 영상이 끝나 버린다.
+            # 프레임 반올림 오차가 쌓여도 안전하게 뒤에 1초 여유를 둔다(여유분은 전환 뒤라 화면에 안 나온다).
+            dur += 1.0
         src, is_video = None, False
         if sc.get("video") and (folder / sc["video"]).exists():
             src, is_video = folder / sc["video"], True
